@@ -1,0 +1,153 @@
+html,
+body {
+    margin: 0;
+    padding: 0;
+    background: #f2f2f2;
+    width: 100%;
+    font-family: Georgia, serif;
+}
+
+html {
+    min-height: 100%;
+}
+
+body {
+    color: #171717;
+    min-height: var(--scroll-height, 260vh);
+}
+
+#disc {
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+}
+
+.ring {
+    position: absolute;
+    border: 1px solid rgba(180, 0, 255, 0.4);
+    border-radius: 50%;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+}
+
+.line {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform-origin: left center;
+    white-space: nowrap;
+    box-sizing: border-box;
+    padding-left: 0;
+    padding-right: 0;
+    font-size: 9px;
+    line-height: 1;
+    color: #111;
+    user-select: text;
+    text-align-last: inherit;
+}
+
+.line--heading {
+    letter-spacing: 0.01em;
+}
+
+.line--quote {
+    color: #555;
+}
+
+.line--spacer {
+    user-select: none;
+}
+
+#status {
+    position: fixed;
+    left: 18px;
+    top: 18px;
+    z-index: 2;
+    max-width: min(360px, calc(100vw - 36px));
+    color: #444;
+    font: 12px/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+#controls {
+    position: fixed;
+    top: 18px;
+    right: 18px;
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0;
+}
+
+#hamburger {
+    background: none;
+    border: 1px solid #aaa;
+    border-radius: 4px;
+    padding: 4px 8px;
+    font: 14px/1 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    color: #555;
+    cursor: pointer;
+}
+
+#controls-panel {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 6px;
+    margin-top: 6px;
+    padding: 10px 12px;
+    background: rgba(242, 242, 242, 0.92);
+    border: 1px solid #ddd;
+    border-radius: 6px;
+}
+
+#controls-panel[hidden] {
+    display: none;
+}
+
+#shapeToggle {
+    background: none;
+    border: 1px solid #aaa;
+    border-radius: 4px;
+    padding: 4px 10px;
+    font: 11px/1 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    color: #555;
+    cursor: pointer;
+}
+
+.slider-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font: 11px/1 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    color: #555;
+}
+
+.slider-row input[type="range"] {
+    width: 80px;
+    accent-color: #555;
+    cursor: pointer;
+}
+
+.radio-group {
+    display: flex;
+    gap: 10px;
+    font: 11px/1 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    color: #555;
+}
+
+.radio-group label {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    cursor: pointer;
+}
+
+.radio-group input[type="radio"] {
+    accent-color: #555;
+    cursor: pointer;
+}
