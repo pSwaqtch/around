@@ -8,8 +8,9 @@
     "rootDir": ".",
     "outDir": ".temp/test-dist",
     "types": ["node"],
+    "jsx": "react-jsx",
     "skipLibCheck": true,
     "esModuleInterop": true
   },
-  "include": ["src/**/*.d.ts", "src/lib/**/*.ts", "tests/**/*.ts"]
+  "include": ["src/**/*.d.ts", "src/lib/**/*.ts", "src/components/**/*.tsx", "tests/**/*.ts"]
 }

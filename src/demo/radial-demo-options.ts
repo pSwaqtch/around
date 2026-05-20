@@ -1,11 +1,21 @@
 import type {
   RadialTextGeometry,
   RadialTextLayout,
+  RadialShapeKind,
   RadialTextTypography,
 } from "../components/RadialText/RadialText.js";
 import type { RadialTextAlign } from "../lib/article-layout.js";
 
 export type FontPreset = "serif" | "sans" | "mono";
+
+export const SHAPE_OPTIONS: Array<{ id: RadialShapeKind; label: string }> = [
+  { id: "stadium", label: "stadium" },
+  { id: "ellipse", label: "ellipse" },
+  { id: "spiral", label: "spiral" },
+  { id: "wave", label: "wave" },
+  { id: "blob", label: "blob" },
+  { id: "svg-path", label: "path" },
+];
 
 export interface DemoOptions {
   widthRatio: number;

@@ -15,6 +15,7 @@ import {
   DEMO_SLIDERS,
   FONT_PRESETS,
   INITIAL_DEMO_OPTIONS,
+  SHAPE_OPTIONS,
   type DemoOptions,
   type FontPreset,
 } from "./demo/radial-demo-options.js";
@@ -76,15 +77,15 @@ export function App() {
           <div className="controlPanel">
             <div className="controlRow">
               <span className="controlLabel">shape</span>
-              <div className="segmentedControl">
-                {(["stadium", "ellipse"] satisfies RadialShapeKind[]).map((item) => (
+              <div className="segmentedControl shapeControl">
+                {SHAPE_OPTIONS.map((item) => (
                   <button
-                    className={item === shape ? "segmentButton isActive" : "segmentButton"}
-                    key={item}
+                    className={item.id === shape ? "segmentButton isActive" : "segmentButton"}
+                    key={item.id}
                     type="button"
-                    onClick={() => setShape(item)}
+                    onClick={() => setShape(item.id)}
                   >
-                    {item}
+                    {item.label}
                   </button>
                 ))}
               </div>

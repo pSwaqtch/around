@@ -12,6 +12,11 @@ import {
   type TrackLine,
 } from "../src/lib/text-track.js";
 
+import {
+  RADIAL_TRACK_FACTORIES,
+  type RadialShapeKind,
+} from "../src/components/RadialText/RadialText.js";
+
 test("closed tracks can loop sampled lines around the route", () => {
   const track = createEllipseTrack(1000, 600, {
     widthRatio: 0.8,
@@ -72,6 +77,12 @@ test("new track factories expose finite arc-length samples and guide paths", () 
     assert(Number.isFinite(middle.lineWidth));
     assert(middle.lineWidth > 0);
   }
+});
+
+test("RadialText exposes the extended track shape registry", () => {
+  const expected: RadialShapeKind[] = ["stadium", "ellipse", "spiral", "wave", "blob", "svg-path"];
+
+  assert.deepEqual(Object.keys(RADIAL_TRACK_FACTORIES), expected);
 });
 
 function createLines(count: number): TrackLine[] {

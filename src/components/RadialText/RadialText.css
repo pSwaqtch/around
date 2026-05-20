@@ -15,18 +15,25 @@
   pointer-events: none;
 }
 
-.radialText__ring {
+.radialText__guides {
   position: absolute;
-  left: 50%;
-  top: 50%;
-  border: 1px solid rgba(78, 100, 87, 0.34);
-  opacity: 0;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
   pointer-events: none;
-  transform: translate(-50%, -50%);
-  transition: opacity 180ms ease;
 }
 
-.radialText--guides .radialText__ring {
+.radialText__guidePath {
+  fill: none;
+  stroke: rgba(78, 100, 87, 0.34);
+  stroke-width: 1;
+  opacity: 0;
+  transition: opacity 180ms ease;
+  vector-effect: non-scaling-stroke;
+}
+
+.radialText--guides .radialText__guidePath {
   opacity: 1;
 }
 

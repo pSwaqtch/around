@@ -3,25 +3,33 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react"
 import {
   buildArticleLines,
   calculateScrollStartT,
-  createEllipseShape,
-  createStadiumShape,
   getStyle,
-  layoutShapeLines,
   type ArticleLine,
   type ArticleTypography,
   type RadialTextAlign,
-  type ShapeOptions,
-  type TrackShape,
 } from "../../lib/article-layout.js";
 import { createPretextWrapper, fillLine } from "../../lib/pretext-wrap.js";
+import {
+  createBlobTrack,
+  createEllipseTrack,
+  createSpiralTrack,
+  createStadiumTrack,
+  createSvgPolylineTrack,
+  createWaveTrack,
+  sampleTextTrackLines,
+  type TextTrack,
+  type TrackGeometryOptions,
+} from "../../lib/text-track.js";
 
-export type RadialShapeKind = "stadium" | "ellipse";
+export type RadialShapeKind = "stadium" | "ellipse" | "spiral" | "wave" | "blob" | "svg-path";
 
 export interface RadialTextGeometry {
   widthRatio?: number;
   heightRatio?: number;
   trackThickness?: number;
   cornerRadius?: number;
+  svgPathPoints?: Array<[number, number]>;
+  svgPathClosed?: boolean;
 }
 
 export interface RadialTextLayout {
@@ -53,7 +61,9 @@ export interface RadialTextProps {
 }
 
 interface ResolvedRadialTextConfig {
-  shapeOptions: ShapeOptions;
+  trackOptions: TrackGeometryOptions;
+  svgPathPoints: Array<[number, number]>;
+  svgPathClosed: boolean;
   typography: ArticleTypography;
   align: RadialTextAlign;
   textInset: number;
@@ -67,7 +77,7 @@ const DEFAULT_GEOMETRY = {
   heightRatio: 0.9,
   trackThickness: 0.56,
   cornerRadius: 1,
-} satisfies Required<RadialTextGeometry>;
+} satisfies Required<Pick<RadialTextGeometry, "widthRatio" | "heightRatio" | "trackThickness" | "cornerRadius">>;
 
 const DEFAULT_LAYOUT = {
   align: "left",
@@ -86,9 +96,16 @@ const DEFAULT_TYPOGRAPHY = {
   headingWeight: 700,
 } satisfies Required<RadialTextTypography>;
 
-const SHAPE_FACTORIES: Record<RadialShapeKind, (width: number, height: number, options: ShapeOptions) => TrackShape> = {
+export const RADIAL_TRACK_FACTORIES: Record<
+  RadialShapeKind,
+  (width: number, height: number, config: ResolvedRadialTextConfig) => TextTrack
+> = {
   stadium: createStadiumShape,
   ellipse: createEllipseShape,
+  spiral: createSpiralShape,
+  wave: createWaveShape,
+  blob: createBlobShape,
+  "svg-path": createSvgPathShape,
 };
 
 export function RadialText({
@@ -102,8 +119,8 @@ export function RadialText({
   showGuides = true,
 }: RadialTextProps) {
   const discRef = useRef<HTMLDivElement | null>(null);
-  const outerRingRef = useRef<HTMLDivElement | null>(null);
-  const innerRingRef = useRef<HTMLDivElement | null>(null);
+  const guideSvgRef = useRef<SVGSVGElement | null>(null);
+  const guidePathRef = useRef<SVGPathElement | null>(null);
   const [scrollHeightVh, setScrollHeightVh] = useState(DEFAULT_LAYOUT.minScrollHeightVh);
   const resolvedConfig = useMemo(
     () => resolveRadialTextConfig(geometry, layout, typography),
@@ -122,44 +139,42 @@ export function RadialText({
 
   useEffect(() => {
     const disc = discRef.current;
-    const outerRing = outerRingRef.current;
-    const innerRing = innerRingRef.current;
+    const guideSvg = guideSvgRef.current;
+    const guidePath = guidePathRef.current;
 
-    if (!disc || !outerRing || !innerRing || typeof window === "undefined") {
+    if (!disc || !guideSvg || !guidePath || typeof window === "undefined") {
       return undefined;
     }
 
     const discElement = disc;
-    const outerRingElement = outerRing;
-    const innerRingElement = innerRing;
+    const guideSvgElement = guideSvg;
+    const guidePathElement = guidePath;
     const wrapText = createPretextWrapper();
     let disposed = false;
     let articleLines: ArticleLine[] = [];
     let lineElements: HTMLDivElement[] = [];
     let prevLineIndices: Array<number | undefined> = [];
-    let activeShape = createShape(shape, resolvedConfig);
+    let activeTrack = createTrack(shape, resolvedConfig);
     let latestScrollY = window.scrollY;
     let tickFrame = 0;
     let resizeFrame = 0;
     let ticking = false;
 
-    function createShape(kind: RadialShapeKind, config: ResolvedRadialTextConfig) {
-      return SHAPE_FACTORIES[kind](window.innerWidth, window.innerHeight, config.shapeOptions);
+    function createTrack(kind: RadialShapeKind, config: ResolvedRadialTextConfig) {
+      return RADIAL_TRACK_FACTORIES[kind](window.innerWidth, window.innerHeight, config);
     }
 
     function applyGeometry() {
-      activeShape = createShape(shape, resolvedConfig);
-
-      outerRingElement.style.width = `${activeShape.outerWidth}px`;
-      outerRingElement.style.height = `${activeShape.outerHeight}px`;
-      outerRingElement.style.borderRadius = activeShape.outerBorderRadius;
-      innerRingElement.style.width = `${activeShape.innerWidth}px`;
-      innerRingElement.style.height = `${activeShape.innerHeight}px`;
-      innerRingElement.style.borderRadius = activeShape.innerBorderRadius;
+      activeTrack = createTrack(shape, resolvedConfig);
+      guideSvgElement.setAttribute(
+        "viewBox",
+        `${-window.innerWidth / 2} ${-window.innerHeight / 2} ${window.innerWidth} ${window.innerHeight}`,
+      );
+      guidePathElement.setAttribute("d", activeTrack.guidePath);
     }
 
     function buildLines() {
-      const maxWidth = Math.max(1, activeShape.lineWidth - resolvedConfig.textInset * 2);
+      const maxWidth = Math.max(1, activeTrack.lineWidth - resolvedConfig.textInset * 2);
       const separatorStyle = getStyle("separator", resolvedConfig.typography);
       const separatorText = fillLine("=", maxWidth, separatorStyle);
 
@@ -188,7 +203,7 @@ export function RadialText({
     }
 
     function renderRadial() {
-      const numSlots = Math.ceil(activeShape.perimeter / resolvedConfig.lineSpacing) + 1;
+      const numSlots = Math.ceil(activeTrack.length / resolvedConfig.lineSpacing) + 1;
 
       discElement.querySelectorAll(".radialText__line").forEach((element) => element.remove());
       lineElements = [];
@@ -211,12 +226,12 @@ export function RadialText({
     function updateConveyorBelt() {
       const maxScroll = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
       const startT = calculateScrollStartT(latestScrollY, maxScroll, 1);
-      const placed = layoutShapeLines(
+      const placed = sampleTextTrackLines(
         articleLines,
-        activeShape,
+        activeTrack,
         startT,
         resolvedConfig.lineSpacing,
-        loop,
+        loop && activeTrack.closed,
       );
       const isJustify = resolvedConfig.align === "justify";
 
@@ -239,7 +254,7 @@ export function RadialText({
         if (line._lineIndex !== prevLineIndices[i]) {
           element.className = `radialText__line radialText__line--${line.kind}`;
           element.textContent = line.text;
-          element.style.width = `${line.lineWidth ?? activeShape.lineWidth}px`;
+          element.style.width = `${line.lineWidth}px`;
           element.style.fontSize = `${line.fontSize}px`;
           element.style.fontWeight = String(line.weight);
           element.style.fontFamily = line.family;
@@ -300,13 +315,15 @@ export function RadialText({
     shape,
     text,
     typography,
+    resolvedConfig,
   ]);
 
   return (
     <div className={rootClassName} style={style}>
       <div className="radialText__disc" ref={discRef}>
-        <div className="radialText__ring radialText__ring--outer" ref={outerRingRef} />
-        <div className="radialText__ring radialText__ring--inner" ref={innerRingRef} />
+        <svg className="radialText__guides" ref={guideSvgRef} aria-hidden="true">
+          <path className="radialText__guidePath" ref={guidePathRef} />
+        </svg>
       </div>
       <div className="radialText__scrollSpacer" aria-hidden="true" />
     </div>
@@ -336,13 +353,19 @@ function resolveRadialTextConfig(
   const headingWeight = Math.max(1, typography?.headingWeight ?? DEFAULT_TYPOGRAPHY.headingWeight);
 
   return {
-    shapeOptions: {
-      scale: 1,
-      scaleX: widthRatio,
-      scaleY: heightRatio,
-      innerRatio: 1 - trackThickness,
+    trackOptions: {
+      widthRatio,
+      heightRatio,
+      trackThickness,
       cornerRadius,
     },
+    svgPathPoints: geometry?.svgPathPoints ?? [
+      [-420, -120],
+      [-180, 110],
+      [120, -90],
+      [430, 130],
+    ],
+    svgPathClosed: Boolean(geometry?.svgPathClosed),
     typography: {
       paragraph: { family: fontFamily, fontSize: bodySize, weight: bodyWeight },
       "list-item": { family: fontFamily, fontSize: bodySize, weight: bodyWeight },
@@ -358,6 +381,34 @@ function resolveRadialTextConfig(
     minScrollHeightVh: Math.max(100, layout?.minScrollHeightVh ?? DEFAULT_LAYOUT.minScrollHeightVh),
     linesPerViewport: Math.max(1, layout?.linesPerViewport ?? DEFAULT_LAYOUT.linesPerViewport),
   };
+}
+
+function createStadiumShape(width: number, height: number, config: ResolvedRadialTextConfig) {
+  return createStadiumTrack(width, height, config.trackOptions);
+}
+
+function createEllipseShape(width: number, height: number, config: ResolvedRadialTextConfig) {
+  return createEllipseTrack(width, height, config.trackOptions);
+}
+
+function createSpiralShape(width: number, height: number, config: ResolvedRadialTextConfig) {
+  return createSpiralTrack(width, height, config.trackOptions);
+}
+
+function createWaveShape(width: number, height: number, config: ResolvedRadialTextConfig) {
+  return createWaveTrack(width, height, config.trackOptions);
+}
+
+function createBlobShape(width: number, height: number, config: ResolvedRadialTextConfig) {
+  return createBlobTrack(width, height, config.trackOptions);
+}
+
+function createSvgPathShape(width: number, height: number, config: ResolvedRadialTextConfig) {
+  return createSvgPolylineTrack(width, height, {
+    points: config.svgPathPoints,
+    closed: config.svgPathClosed,
+    trackThickness: config.trackOptions.trackThickness,
+  });
 }
 
 function clampUnit(value: number) {

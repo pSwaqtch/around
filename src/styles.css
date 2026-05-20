@@ -126,6 +126,11 @@ button {
   background: rgba(227, 230, 225, 0.72);
 }
 
+.shapeControl {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-auto-flow: row;
+}
+
 .segmentButton,
 .toggleButton {
   border: 0;
@@ -142,6 +147,14 @@ button {
 
 .segmentButton + .segmentButton {
   border-left: 1px solid rgba(38, 45, 40, 0.12);
+}
+
+.shapeControl .segmentButton:nth-child(3n + 1) {
+  border-left: 0;
+}
+
+.shapeControl .segmentButton:nth-child(n + 4) {
+  border-top: 1px solid rgba(38, 45, 40, 0.12);
 }
 
 .toggleButton {
