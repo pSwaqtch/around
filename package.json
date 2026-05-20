@@ -5,11 +5,19 @@
   "type": "module",
   "scripts": {
     "dev": "vite --host 127.0.0.1",
-    "test": "node --test tests/*.test.mjs"
+    "build": "tsc && vite build",
+    "test": "tsc -p tsconfig.test.json && node --test .temp/test-dist/tests/text-track.test.js",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@chenglou/pretext": "^0.0.7",
+    "react": "^19.2.6",
+    "react-dom": "^19.2.6",
     "vite": "^7.2.4"
   },
-  "devDependencies": {}
+  "devDependencies": {
+    "@types/react": "^19.2.15",
+    "@types/react-dom": "^19.2.3",
+    "typescript": "^6.0.3"
+  }
 }

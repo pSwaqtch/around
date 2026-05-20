@@ -1,64 +1,12 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Radial Article Layout</title>
-<link rel="stylesheet" href="styles.css" />
-</head>
-<body>
-
-<div id="disc">
-    <div class="ring" id="outerRing"></div>
-    <div class="ring" id="innerRing"></div>
-</div>
-
-<div id="status">Loading article...</div>
-
-<div id="controls">
-  <button id="hamburger" aria-label="Toggle controls">&#9776;</button>
-  <div id="controls-panel" hidden>
-    <button id="shapeToggle" data-shape="stadium">ellipse</button>
-    <button id="loopToggle" data-loop="false">loop</button>
-    <label class="slider-row">
-      <span>size</span>
-      <input type="range" id="sizeSlider" min="30" max="100" value="100">
-      <span id="sizeVal">100</span>
-    </label>
-    <label class="slider-row">
-      <span>track</span>
-      <input type="range" id="trackSlider" min="15" max="80" value="44">
-      <span id="trackVal">44</span>
-    </label>
-    <label class="slider-row">
-      <span>padding</span>
-      <input type="range" id="paddingSlider" min="0" max="20" value="6">
-      <span id="paddingVal">6</span>
-    </label>
-    <label class="slider-row">
-      <span>x</span>
-      <input type="range" id="shapeXSlider" min="0" max="100" value="30">
-      <span id="shapeXVal">30</span>
-    </label>
-    <label class="slider-row">
-      <span>y</span>
-      <input type="range" id="shapeYSlider" min="0" max="100" value="0">
-      <span id="shapeYVal">0</span>
-    </label>
-    <label class="slider-row">
-      <span>corner</span>
-      <input type="range" id="cornerSlider" min="0" max="100" value="100">
-      <span id="cornerVal">100</span>
-    </label>
-    <div class="radio-group">
-      <label><input type="radio" name="align" value="left" checked> left</label>
-      <label><input type="radio" name="align" value="justify"> justify</label>
-      <label><input type="radio" name="align" value="right"> right</label>
-    </div>
-  </div>
-</div>
-
-<script type="module" src="src/main.mjs"></script>
-
-</body>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Radial Text</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
 </html>

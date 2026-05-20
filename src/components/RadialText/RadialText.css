@@ -1,0 +1,64 @@
+.radialText {
+  position: relative;
+}
+
+.radialText__disc {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100dvh;
+  overflow: hidden;
+}
+
+.radialText__scrollSpacer {
+  height: var(--radial-scroll-height, 260vh);
+  pointer-events: none;
+}
+
+.radialText__ring {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  border: 1px solid rgba(78, 100, 87, 0.34);
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+  transition: opacity 180ms ease;
+}
+
+.radialText--guides .radialText__ring {
+  opacity: 1;
+}
+
+.radialText__line {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  box-sizing: border-box;
+  padding-left: 0;
+  padding-right: 0;
+  color: #171717;
+  font-size: 9px;
+  line-height: 1;
+  text-align-last: inherit;
+  transform-origin: left center;
+  user-select: text;
+  white-space: nowrap;
+}
+
+.radialText__line--heading {
+  color: #111513;
+}
+
+.radialText__line--quote {
+  color: #565c57;
+}
+
+.radialText__line--spacer,
+.radialText__line--separator {
+  user-select: none;
+}
+
+.radialText__line--separator {
+  color: #a8ada8;
+}

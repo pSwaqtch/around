@@ -1,0 +1,199 @@
+:root {
+  color: #171917;
+  background: #f3f4f2;
+  font-family:
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.72), rgba(232, 235, 231, 0.52)),
+    #f3f4f2;
+  color: #171917;
+}
+
+button,
+input {
+  font: inherit;
+}
+
+button {
+  color: inherit;
+}
+
+.controlDock {
+  position: fixed;
+  top: 18px;
+  right: 18px;
+  z-index: 2;
+  display: flex;
+  width: min(336px, calc(100vw - 36px));
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  color: #303630;
+}
+
+.dockToggle {
+  min-width: 56px;
+  border: 1px solid rgba(38, 45, 40, 0.24);
+  border-radius: 6px;
+  padding: 7px 10px;
+  background: rgba(247, 248, 246, 0.82);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+  cursor: pointer;
+  font: 600 12px/1 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  transition:
+    transform 160ms ease,
+    border-color 160ms ease,
+    background 160ms ease;
+}
+
+.dockToggle:hover {
+  border-color: rgba(38, 45, 40, 0.42);
+  background: rgba(255, 255, 255, 0.92);
+}
+
+.dockToggle:active {
+  transform: translateY(1px) scale(0.98);
+}
+
+.controlPanel {
+  display: grid;
+  width: 100%;
+  gap: 10px;
+  border: 1px solid rgba(38, 45, 40, 0.16);
+  border-radius: 8px;
+  padding: 12px;
+  background: rgba(247, 248, 246, 0.9);
+  box-shadow:
+    0 16px 42px rgba(30, 36, 32, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(12px);
+}
+
+.controlRow,
+.switchRow,
+.sliderRow {
+  display: grid;
+  align-items: center;
+  gap: 8px;
+}
+
+.controlRow {
+  grid-template-columns: 56px minmax(0, 1fr);
+}
+
+.switchRow {
+  grid-template-columns: 1fr 1fr;
+}
+
+.sliderRow {
+  grid-template-columns: 56px minmax(104px, 1fr) 34px;
+  font: 500 11px/1 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+.controlLabel {
+  color: #59615a;
+  font: 500 11px/1 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+.segmentedControl {
+  display: grid;
+  grid-auto-columns: 1fr;
+  grid-auto-flow: column;
+  overflow: hidden;
+  border: 1px solid rgba(38, 45, 40, 0.16);
+  border-radius: 6px;
+  background: rgba(227, 230, 225, 0.72);
+}
+
+.segmentButton,
+.toggleButton {
+  border: 0;
+  border-radius: 0;
+  padding: 7px 8px;
+  background: transparent;
+  cursor: pointer;
+  font: 600 11px/1 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  transition:
+    background 160ms ease,
+    color 160ms ease,
+    transform 160ms ease;
+}
+
+.segmentButton + .segmentButton {
+  border-left: 1px solid rgba(38, 45, 40, 0.12);
+}
+
+.toggleButton {
+  border: 1px solid rgba(38, 45, 40, 0.16);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.42);
+}
+
+.segmentButton:hover,
+.toggleButton:hover {
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.segmentButton:active,
+.toggleButton:active {
+  transform: translateY(1px) scale(0.98);
+}
+
+.segmentButton.isActive,
+.toggleButton.isActive {
+  background: #2f3a33;
+  color: #f8faf7;
+}
+
+.sliderRow span,
+.sliderRow output {
+  color: #59615a;
+}
+
+.sliderRow input[type="range"] {
+  width: 100%;
+  accent-color: #3f5549;
+  cursor: pointer;
+}
+
+@media (max-width: 640px) {
+  .controlDock {
+    top: 12px;
+    right: 12px;
+    width: min(312px, calc(100vw - 24px));
+  }
+
+  .controlPanel {
+    padding: 10px;
+  }
+
+  .controlRow,
+  .sliderRow {
+    grid-template-columns: 48px minmax(0, 1fr) 30px;
+  }
+
+  .controlRow {
+    grid-template-columns: 48px minmax(0, 1fr);
+  }
+}
