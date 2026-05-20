@@ -17,19 +17,24 @@ import {
   createSvgPolylineTrack,
   createWaveTrack,
   sampleTextTrackLines,
+  type BlobTrackOptions,
+  type EllipseTrackOptions,
+  type SpiralTrackOptions,
+  type StadiumTrackOptions,
+  type SvgPolylineTrackOptions,
   type TextTrack,
-  type TrackGeometryOptions,
+  type WaveTrackOptions,
 } from "../../lib/text-track.js";
 
 export type RadialShapeKind = "stadium" | "ellipse" | "spiral" | "wave" | "blob" | "svg-path";
 
 export interface RadialTextGeometry {
-  widthRatio?: number;
-  heightRatio?: number;
-  trackThickness?: number;
-  cornerRadius?: number;
-  svgPathPoints?: Array<[number, number]>;
-  svgPathClosed?: boolean;
+  stadium?: StadiumTrackOptions;
+  ellipse?: EllipseTrackOptions;
+  spiral?: SpiralTrackOptions;
+  wave?: WaveTrackOptions;
+  blob?: BlobTrackOptions;
+  svgPath?: Partial<SvgPolylineTrackOptions>;
 }
 
 export interface RadialTextLayout {
@@ -60,10 +65,17 @@ export interface RadialTextProps {
   showGuides?: boolean;
 }
 
+interface ResolvedRadialTextGeometry {
+  stadium: StadiumTrackOptions;
+  ellipse: EllipseTrackOptions;
+  spiral: SpiralTrackOptions;
+  wave: WaveTrackOptions;
+  blob: BlobTrackOptions;
+  svgPath: SvgPolylineTrackOptions;
+}
+
 interface ResolvedRadialTextConfig {
-  trackOptions: TrackGeometryOptions;
-  svgPathPoints: Array<[number, number]>;
-  svgPathClosed: boolean;
+  geometry: ResolvedRadialTextGeometry;
   typography: ArticleTypography;
   align: RadialTextAlign;
   textInset: number;
@@ -73,11 +85,48 @@ interface ResolvedRadialTextConfig {
 }
 
 const DEFAULT_GEOMETRY = {
-  widthRatio: 0.9,
-  heightRatio: 0.9,
-  trackThickness: 0.56,
-  cornerRadius: 1,
-} satisfies Required<Pick<RadialTextGeometry, "widthRatio" | "heightRatio" | "trackThickness" | "cornerRadius">>;
+  stadium: {
+    widthRatio: 0.9,
+    heightRatio: 0.9,
+    trackThickness: 0.56,
+    cornerRadius: 1,
+  },
+  ellipse: {
+    widthRatio: 0.9,
+    heightRatio: 0.9,
+    trackThickness: 0.56,
+  },
+  spiral: {
+    scale: 0.76,
+    turns: 2.85,
+    innerRadiusRatio: 0.18,
+    trackThickness: 0.18,
+  },
+  wave: {
+    widthRatio: 0.9,
+    amplitudeRatio: 0.32,
+    cycles: 2.4,
+    trackThickness: 0.16,
+  },
+  blob: {
+    widthRatio: 0.82,
+    heightRatio: 0.78,
+    wobble: 0.16,
+    lobes: 5,
+    trackThickness: 0.2,
+  },
+  svgPath: {
+    points: [
+      [-420, -120],
+      [-180, 110],
+      [120, -90],
+      [430, 130],
+    ],
+    scale: 1,
+    trackThickness: 0.16,
+    closed: false,
+  },
+} satisfies Required<RadialTextGeometry>;
 
 const DEFAULT_LAYOUT = {
   align: "left",
@@ -121,6 +170,7 @@ export function RadialText({
   const discRef = useRef<HTMLDivElement | null>(null);
   const guideSvgRef = useRef<SVGSVGElement | null>(null);
   const guidePathRef = useRef<SVGPathElement | null>(null);
+  const outerGuidePathRef = useRef<SVGPathElement | null>(null);
   const [scrollHeightVh, setScrollHeightVh] = useState(DEFAULT_LAYOUT.minScrollHeightVh);
   const resolvedConfig = useMemo(
     () => resolveRadialTextConfig(geometry, layout, typography),
@@ -141,14 +191,16 @@ export function RadialText({
     const disc = discRef.current;
     const guideSvg = guideSvgRef.current;
     const guidePath = guidePathRef.current;
+    const outerGuidePath = outerGuidePathRef.current;
 
-    if (!disc || !guideSvg || !guidePath || typeof window === "undefined") {
+    if (!disc || !guideSvg || !guidePath || !outerGuidePath || typeof window === "undefined") {
       return undefined;
     }
 
     const discElement = disc;
     const guideSvgElement = guideSvg;
     const guidePathElement = guidePath;
+    const outerGuidePathElement = outerGuidePath;
     const wrapText = createPretextWrapper();
     let disposed = false;
     let articleLines: ArticleLine[] = [];
@@ -171,6 +223,7 @@ export function RadialText({
         `${-window.innerWidth / 2} ${-window.innerHeight / 2} ${window.innerWidth} ${window.innerHeight}`,
       );
       guidePathElement.setAttribute("d", activeTrack.guidePath);
+      outerGuidePathElement.setAttribute("d", activeTrack.outerGuidePath);
     }
 
     function buildLines() {
@@ -322,6 +375,7 @@ export function RadialText({
     <div className={rootClassName} style={style}>
       <div className="radialText__disc" ref={discRef}>
         <svg className="radialText__guides" ref={guideSvgRef} aria-hidden="true">
+          <path className="radialText__guidePath radialText__guidePath--outer" ref={outerGuidePathRef} />
           <path className="radialText__guidePath" ref={guidePathRef} />
         </svg>
       </div>
@@ -341,10 +395,6 @@ function resolveRadialTextConfig(
   layout: RadialTextLayout | undefined,
   typography: RadialTextTypography | undefined,
 ): ResolvedRadialTextConfig {
-  const widthRatio = clampUnit(geometry?.widthRatio ?? DEFAULT_GEOMETRY.widthRatio);
-  const heightRatio = clampUnit(geometry?.heightRatio ?? DEFAULT_GEOMETRY.heightRatio);
-  const trackThickness = clamp(geometry?.trackThickness ?? DEFAULT_GEOMETRY.trackThickness, 0.05, 0.9);
-  const cornerRadius = clamp(geometry?.cornerRadius ?? DEFAULT_GEOMETRY.cornerRadius, 0, 1);
   const fontFamily = typography?.fontFamily ?? DEFAULT_TYPOGRAPHY.fontFamily;
   const bodySize = Math.max(1, typography?.bodySize ?? DEFAULT_TYPOGRAPHY.bodySize);
   const headingSize = Math.max(1, typography?.headingSize ?? DEFAULT_TYPOGRAPHY.headingSize);
@@ -353,19 +403,14 @@ function resolveRadialTextConfig(
   const headingWeight = Math.max(1, typography?.headingWeight ?? DEFAULT_TYPOGRAPHY.headingWeight);
 
   return {
-    trackOptions: {
-      widthRatio,
-      heightRatio,
-      trackThickness,
-      cornerRadius,
+    geometry: {
+      stadium: { ...DEFAULT_GEOMETRY.stadium, ...geometry?.stadium },
+      ellipse: { ...DEFAULT_GEOMETRY.ellipse, ...geometry?.ellipse },
+      spiral: { ...DEFAULT_GEOMETRY.spiral, ...geometry?.spiral },
+      wave: { ...DEFAULT_GEOMETRY.wave, ...geometry?.wave },
+      blob: { ...DEFAULT_GEOMETRY.blob, ...geometry?.blob },
+      svgPath: { ...DEFAULT_GEOMETRY.svgPath, ...geometry?.svgPath },
     },
-    svgPathPoints: geometry?.svgPathPoints ?? [
-      [-420, -120],
-      [-180, 110],
-      [120, -90],
-      [430, 130],
-    ],
-    svgPathClosed: Boolean(geometry?.svgPathClosed),
     typography: {
       paragraph: { family: fontFamily, fontSize: bodySize, weight: bodyWeight },
       "list-item": { family: fontFamily, fontSize: bodySize, weight: bodyWeight },
@@ -384,37 +429,25 @@ function resolveRadialTextConfig(
 }
 
 function createStadiumShape(width: number, height: number, config: ResolvedRadialTextConfig) {
-  return createStadiumTrack(width, height, config.trackOptions);
+  return createStadiumTrack(width, height, config.geometry.stadium);
 }
 
 function createEllipseShape(width: number, height: number, config: ResolvedRadialTextConfig) {
-  return createEllipseTrack(width, height, config.trackOptions);
+  return createEllipseTrack(width, height, config.geometry.ellipse);
 }
 
 function createSpiralShape(width: number, height: number, config: ResolvedRadialTextConfig) {
-  return createSpiralTrack(width, height, config.trackOptions);
+  return createSpiralTrack(width, height, config.geometry.spiral);
 }
 
 function createWaveShape(width: number, height: number, config: ResolvedRadialTextConfig) {
-  return createWaveTrack(width, height, config.trackOptions);
+  return createWaveTrack(width, height, config.geometry.wave);
 }
 
 function createBlobShape(width: number, height: number, config: ResolvedRadialTextConfig) {
-  return createBlobTrack(width, height, config.trackOptions);
+  return createBlobTrack(width, height, config.geometry.blob);
 }
 
 function createSvgPathShape(width: number, height: number, config: ResolvedRadialTextConfig) {
-  return createSvgPolylineTrack(width, height, {
-    points: config.svgPathPoints,
-    closed: config.svgPathClosed,
-    trackThickness: config.trackOptions.trackThickness,
-  });
-}
-
-function clampUnit(value: number) {
-  return clamp(value, 0.05, 1);
-}
-
-function clamp(value: number, min: number, max: number) {
-  return Math.min(max, Math.max(min, value));
+  return createSvgPolylineTrack(width, height, config.geometry.svgPath);
 }

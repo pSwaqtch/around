@@ -25,21 +25,53 @@ export interface TextTrack {
   length: number;
   lineWidth: number;
   guidePath: string;
+  outerGuidePath: string;
   sampleAt(distance: number): TrackSample;
 }
 
-export interface TrackGeometryOptions {
+export interface StadiumTrackOptions {
   widthRatio?: number;
   heightRatio?: number;
   trackThickness?: number;
   cornerRadius?: number;
 }
 
+export interface EllipseTrackOptions {
+  widthRatio?: number;
+  heightRatio?: number;
+  trackThickness?: number;
+}
+
+export interface SpiralTrackOptions {
+  scale?: number;
+  turns?: number;
+  innerRadiusRatio?: number;
+  trackThickness?: number;
+}
+
+export interface WaveTrackOptions {
+  widthRatio?: number;
+  amplitudeRatio?: number;
+  cycles?: number;
+  trackThickness?: number;
+}
+
+export interface BlobTrackOptions {
+  widthRatio?: number;
+  heightRatio?: number;
+  wobble?: number;
+  lobes?: number;
+  trackThickness?: number;
+}
+
 export interface SvgPolylineTrackOptions {
   points: Array<[number, number]>;
+  scale?: number;
   trackThickness?: number;
   closed?: boolean;
 }
+
+export type TrackGeometryOptions = StadiumTrackOptions;
 
 interface TrackNode {
   x: number;
@@ -102,7 +134,7 @@ export function sampleTextTrackLines(
 export function createStadiumTrack(
   viewportWidth: number,
   viewportHeight: number,
-  options: TrackGeometryOptions = {},
+  options: StadiumTrackOptions = {},
 ): TextTrack {
   const geometry = resolveGeometry(viewportWidth, viewportHeight, options);
   const outerHalfW = geometry.outerHalfW;
@@ -113,6 +145,9 @@ export function createStadiumTrack(
   const radius = Math.min(innerHalfW, innerHalfH) * geometry.cornerRadius;
   const arcOffsetX = Math.max(0, innerHalfW - radius);
   const arcOffsetY = Math.max(0, innerHalfH - radius);
+  const outerRadius = Math.min(outerHalfW, outerHalfH) * geometry.cornerRadius;
+  const outerArcOffsetX = Math.max(0, outerHalfW - outerRadius);
+  const outerArcOffsetY = Math.max(0, outerHalfH - outerRadius);
   const nodes = sampleParametric(720, true, (t) => {
     const point = roundedRectPoint(t, arcOffsetX, arcOffsetY, radius);
 
@@ -121,14 +156,18 @@ export function createStadiumTrack(
       lineWidth: trackWidth,
     };
   });
+  const outerNodes = sampleParametric(720, true, (t) => ({
+    ...roundedRectPoint(t, outerArcOffsetX, outerArcOffsetY, outerRadius),
+    lineWidth: trackWidth,
+  }));
 
-  return buildTrack("stadium", nodes, true, trackWidth, pathFromNodes(nodes, true));
+  return buildTrack("stadium", nodes, true, trackWidth, pathFromNodes(nodes, true), pathFromNodes(outerNodes, true));
 }
 
 export function createEllipseTrack(
   viewportWidth: number,
   viewportHeight: number,
-  options: TrackGeometryOptions = {},
+  options: EllipseTrackOptions = {},
 ): TextTrack {
   const geometry = resolveGeometry(viewportWidth, viewportHeight, options);
   const outerA = geometry.outerHalfW;
@@ -156,19 +195,33 @@ export function createEllipseTrack(
       lineWidth,
     };
   });
+  const outerNodes = sampleParametric(960, true, (t) => {
+    const angle = t * Math.PI * 2 - Math.PI / 2;
 
-  return buildTrack("ellipse", nodes, true, trackWidth, pathFromNodes(nodes, true));
+    return {
+      x: outerA * Math.cos(angle),
+      y: outerB * Math.sin(angle),
+      angleDeg: angle * 180 / Math.PI,
+      lineWidth: trackWidth,
+    };
+  });
+
+  return buildTrack("ellipse", nodes, true, trackWidth, pathFromNodes(nodes, true), pathFromNodes(outerNodes, true));
 }
 
 export function createSpiralTrack(
   viewportWidth: number,
   viewportHeight: number,
-  options: TrackGeometryOptions = {},
+  options: SpiralTrackOptions = {},
 ): TextTrack {
-  const geometry = resolveGeometry(viewportWidth, viewportHeight, options);
-  const maxRadius = Math.max(1, Math.min(geometry.outerHalfW, geometry.outerHalfH) - geometry.trackWidth);
-  const minRadius = Math.max(24, maxRadius * 0.18);
-  const turns = 2.85;
+  const scale = clamp(options.scale ?? DEFAULT_GEOMETRY.widthRatio, 0.05, 1);
+  const outerRadius = Math.max(1, Math.floor(Math.min(viewportWidth, viewportHeight) / 2 * scale) - DISC_MARGIN);
+  const trackThickness = clamp(options.trackThickness ?? 0.18, 0.03, 0.65);
+  const trackWidth = Math.max(1, Math.round(outerRadius * trackThickness));
+  const maxRadius = Math.max(1, outerRadius - trackWidth);
+  const innerRadiusRatio = clamp(options.innerRadiusRatio ?? 0.18, 0.02, 0.8);
+  const minRadius = Math.max(1, maxRadius * innerRadiusRatio);
+  const turns = clamp(options.turns ?? 2.85, 0.5, 8);
   const thetaMax = turns * Math.PI * 2;
   const nodes = sampleParametric(960, false, (t) => {
     const theta = t * thetaMax - Math.PI / 2;
@@ -178,53 +231,62 @@ export function createSpiralTrack(
       x: radius * Math.cos(theta),
       y: radius * Math.sin(theta),
       angleDeg: theta * 180 / Math.PI,
-      lineWidth: geometry.trackWidth,
+      lineWidth: trackWidth,
     };
   });
 
-  return buildTrack("spiral", nodes, false, geometry.trackWidth, pathFromNodes(nodes, false));
+  return buildTrack("spiral", nodes, false, trackWidth, pathFromNodes(nodes, false), pathFromNodes(offsetNodesByAngle(nodes, trackWidth), false));
 }
 
 export function createWaveTrack(
   viewportWidth: number,
   viewportHeight: number,
-  options: TrackGeometryOptions = {},
+  options: WaveTrackOptions = {},
 ): TextTrack {
-  const geometry = resolveGeometry(viewportWidth, viewportHeight, options);
-  const halfW = Math.max(1, geometry.outerHalfW - geometry.trackWidth);
-  const amplitude = Math.max(1, geometry.outerHalfH * 0.52 - geometry.trackWidth);
-  const cycles = 2.4;
+  const widthRatio = clamp(options.widthRatio ?? DEFAULT_GEOMETRY.widthRatio, 0.05, 1);
+  const amplitudeRatio = clamp(options.amplitudeRatio ?? 0.32, 0.02, 0.9);
+  const halfW = Math.max(1, Math.floor(viewportWidth / 2 * widthRatio) - DISC_MARGIN);
+  const trackWidth = Math.max(
+    1,
+    Math.round(Math.min(halfW, viewportHeight / 2) * clamp(options.trackThickness ?? 0.16, 0.03, 0.65)),
+  );
+  const amplitude = Math.max(1, viewportHeight / 2 * amplitudeRatio - trackWidth);
+  const cycles = clamp(options.cycles ?? 2.4, 0.25, 8);
   const nodes = sampleParametric(720, false, (t) => ({
     x: -halfW + halfW * 2 * t,
     y: Math.sin(t * Math.PI * 2 * cycles) * amplitude,
     angleDeg: 0,
-    lineWidth: geometry.trackWidth,
+    lineWidth: trackWidth,
   }));
 
-  return buildTrack("wave", nodes, false, geometry.trackWidth, pathFromNodes(nodes, false));
+  return buildTrack("wave", nodes, false, trackWidth, pathFromNodes(nodes, false), pathFromNodes(offsetNodesByTangent(nodes, trackWidth), false));
 }
 
 export function createBlobTrack(
   viewportWidth: number,
   viewportHeight: number,
-  options: TrackGeometryOptions = {},
+  options: BlobTrackOptions = {},
 ): TextTrack {
   const geometry = resolveGeometry(viewportWidth, viewportHeight, options);
   const baseA = Math.max(1, geometry.outerHalfW - geometry.trackWidth);
   const baseB = Math.max(1, geometry.outerHalfH - geometry.trackWidth);
+  const wobble = clamp(options.wobble ?? 0.16, 0, 0.45);
+  const lobes = Math.max(2, Math.round(clamp(options.lobes ?? 5, 2, 12)));
   const nodes = sampleParametric(960, true, (t) => {
     const theta = t * Math.PI * 2 - Math.PI / 2;
-    const wobble = 1 + 0.12 * Math.sin(theta * 3 + 0.6) + 0.08 * Math.sin(theta * 5 - 0.9);
+    const radiusScale = 1
+      + wobble * Math.sin(theta * lobes + 0.6)
+      + wobble * 0.55 * Math.sin(theta * (lobes + 2) - 0.9);
 
     return {
-      x: baseA * wobble * Math.cos(theta),
-      y: baseB * wobble * Math.sin(theta),
+      x: baseA * radiusScale * Math.cos(theta),
+      y: baseB * radiusScale * Math.sin(theta),
       angleDeg: theta * 180 / Math.PI,
       lineWidth: geometry.trackWidth,
     };
   });
 
-  return buildTrack("blob", nodes, true, geometry.trackWidth, pathFromNodes(nodes, true));
+  return buildTrack("blob", nodes, true, geometry.trackWidth, pathFromNodes(nodes, true), pathFromNodes(offsetNodesByAngle(nodes, geometry.trackWidth), true));
 }
 
 export function createSvgPolylineTrack(
@@ -233,15 +295,23 @@ export function createSvgPolylineTrack(
   options: SvgPolylineTrackOptions,
 ): TextTrack {
   const trackWidth = Math.max(1, Math.min(viewportWidth, viewportHeight) * (options.trackThickness ?? 0.14));
-  const nodes = options.points.map(([x, y]) => ({
-    x,
-    y,
+  const scale = clamp(options.scale ?? 1, 0.05, 4);
+  const nodes = withPolylineTangents(options.points.map(([x, y]) => ({
+    x: x * scale,
+    y: y * scale,
     angleDeg: 0,
     tangentDeg: 0,
     lineWidth: trackWidth,
-  }));
+  })), Boolean(options.closed));
 
-  return buildTrack("svg-path", nodes, Boolean(options.closed), trackWidth, pathFromNodes(nodes, Boolean(options.closed)));
+  return buildTrack(
+    "svg-path",
+    nodes,
+    Boolean(options.closed),
+    trackWidth,
+    pathFromNodes(nodes, Boolean(options.closed)),
+    pathFromNodes(offsetNodesByTangent(nodes, trackWidth), Boolean(options.closed)),
+  );
 }
 
 function buildTrack(
@@ -250,6 +320,7 @@ function buildTrack(
   closed: boolean,
   fallbackLineWidth: number,
   guidePath: string,
+  outerGuidePath: string,
 ): TextTrack {
   const measured = measureNodes(nodes, closed);
   const length = measured.at(-1)?.distance ?? 0;
@@ -260,6 +331,7 @@ function buildTrack(
     length,
     lineWidth: fallbackLineWidth,
     guidePath,
+    outerGuidePath,
     sampleAt(distance: number) {
       if (measured.length === 0) {
         return { x: 0, y: 0, angleDeg: 0, tangentDeg: 0, lineWidth: fallbackLineWidth };
@@ -429,6 +501,44 @@ function pathFromNodes(nodes: Array<{ x: number; y: number }>, closed: boolean) 
   }
 
   return path.join(" ");
+}
+
+function offsetNodesByAngle(nodes: TrackNode[], distance: number): TrackNode[] {
+  return nodes.map((node) => {
+    const angle = node.angleDeg * Math.PI / 180;
+
+    return {
+      ...node,
+      x: node.x + Math.cos(angle) * distance,
+      y: node.y + Math.sin(angle) * distance,
+    };
+  });
+}
+
+function offsetNodesByTangent(nodes: TrackNode[], distance: number): TrackNode[] {
+  return nodes.map((node) => {
+    const angle = (node.tangentDeg + 90) * Math.PI / 180;
+
+    return {
+      ...node,
+      x: node.x + Math.cos(angle) * distance,
+      y: node.y + Math.sin(angle) * distance,
+    };
+  });
+}
+
+function withPolylineTangents(nodes: TrackNode[], closed: boolean): TrackNode[] {
+  return nodes.map((node, index) => {
+    const prev = nodes[index - 1] ?? (closed ? nodes.at(-1) : node);
+    const next = nodes[index + 1] ?? (closed ? nodes[0] : node);
+    const tangentDeg = prev && next ? angleBetween(prev.x, prev.y, next.x, next.y) : 0;
+
+    return {
+      ...node,
+      tangentDeg,
+      angleDeg: tangentDeg + 90,
+    };
+  });
 }
 
 function angleBetween(x1: number, y1: number, x2: number, y2: number) {

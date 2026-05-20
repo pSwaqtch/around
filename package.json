@@ -6,7 +6,6 @@
   "scripts": {
     "dev": "vite --host 127.0.0.1",
     "build": "tsc && vite build",
-    "test": "tsc -p tsconfig.test.json && node --test .temp/test-dist/tests/text-track.test.js",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

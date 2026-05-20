@@ -12,9 +12,9 @@ import {
   createRadialGeometry,
   createRadialLayout,
   createRadialTypography,
-  DEMO_SLIDERS,
   FONT_PRESETS,
-  INITIAL_DEMO_OPTIONS,
+  getDemoSliders,
+  INITIAL_DEMO_OPTIONS_BY_SHAPE,
   SHAPE_OPTIONS,
   type DemoOptions,
   type FontPreset,
@@ -30,10 +30,12 @@ export function App() {
   const [showGuides, setShowGuides] = useState(true);
   const [align, setAlign] = useState<RadialTextAlign>("left");
   const [fontPreset, setFontPreset] = useState<FontPreset>("serif");
-  const [demoOptions, setDemoOptions] = useState(INITIAL_DEMO_OPTIONS);
+  const [demoOptionsByShape, setDemoOptionsByShape] = useState(INITIAL_DEMO_OPTIONS_BY_SHAPE);
+  const demoOptions = demoOptionsByShape[shape];
+  const sliders = useMemo(() => getDemoSliders(shape), [shape]);
   const radialGeometry = useMemo<RadialTextGeometry>(
-    () => createRadialGeometry(demoOptions),
-    [demoOptions],
+    () => createRadialGeometry(shape, demoOptions),
+    [demoOptions, shape],
   );
   const radialLayout = useMemo<RadialTextLayout>(
     () => createRadialLayout(demoOptions, align),
@@ -45,9 +47,12 @@ export function App() {
   );
 
   function updateSlider(id: keyof DemoOptions, value: number) {
-    setDemoOptions((current) => ({
+    setDemoOptionsByShape((current) => ({
       ...current,
-      [id]: value,
+      [shape]: {
+        ...current[shape],
+        [id]: value,
+      },
     }));
   }
 
@@ -126,7 +131,7 @@ export function App() {
               </div>
             </div>
 
-            {DEMO_SLIDERS.map((slider) => (
+            {sliders.map((slider) => (
               <label className="sliderRow" key={slider.id}>
                 <span>{slider.label}</span>
                 <input
