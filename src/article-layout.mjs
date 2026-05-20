@@ -20,6 +20,7 @@ const HEADING_MARKER_RE = /^(#{1,6})\s+(.+)$/;
 const LIST_MARKER_RE = /^[-*+]\s+(.+)$/;
 const NUMBERED_MARKER_RE = /^\d+[.)]\s+(.+)$/;
 const QUOTE_MARKER_RE = /^>\s?(.+)$/;
+const THEMATIC_BREAK_RE = /^([-*_=])\1{2,}\s*$/;
 
 export function parseArticle(source) {
   const normalized = source.replace(/\r\n?/g, "\n").trim();
@@ -80,6 +81,11 @@ export function parseArticle(source) {
         kind: "quote",
         text: normalizeInlineText(quote[1]),
       });
+      return;
+    }
+
+    if (THEMATIC_BREAK_RE.test(line)) {
+      flushParagraph();
       return;
     }
 
@@ -183,26 +189,30 @@ export function calculateDiscGeometry(viewportWidth, viewportHeight) {
 // Fixed-spacing conveyor belt: lines are spaced minSpacing px apart around the
 // inner ring. Only the lines currently on the perimeter are returned (others null).
 // startT advances through the article so content cycles in at t=0 and out at t≈1.
-export function layoutShapeLines(lines, shape, startT = 0, minSpacing = 12) {
+export function layoutShapeLines(lines, shape, startT = 0, minSpacing = 12, loop = false) {
   if (lines.length === 0) return [];
 
   const { perimeter } = shape;
   const step = minSpacing / perimeter;        // t per line
   const numSlots = Math.ceil(1 / step) + 1;  // slots needed (constant for a shape)
 
-  // beltPos: continuous position through the article in "line units"
-  const beltPos = ((startT % 1) + 1) % 1 * lines.length;
+  // beltPos in "line units"; loop wraps through the article, once clamps to end
+  const beltPos = loop
+    ? ((startT % 1) + 1) % 1 * lines.length
+    : Math.max(0, Math.min(startT, 1)) * lines.length;
   const firstIdx = Math.floor(beltPos);
-  const frac = beltPos - firstIdx;           // fractional offset into current slot
+  const frac = beltPos - firstIdx;
 
   const result = [];
   for (let i = 0; i < numSlots; i++) {
     const t = (i - frac) * step;
-    if (t < 0 || t >= 1) {
+    const lineIndex = loop
+      ? (firstIdx + i) % lines.length
+      : firstIdx + i;
+    if (t < 0 || t >= 1 || lineIndex < 0 || lineIndex >= lines.length) {
       result.push(null);
       continue;
     }
-    const lineIndex = (firstIdx + i) % lines.length;
     const pt = shape.point(t);
     result.push({ ...lines[lineIndex], ...pt, _lineIndex: lineIndex });
   }

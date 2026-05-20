@@ -2,6 +2,19 @@ import { layoutWithLines, prepareWithSegments } from "@chenglou/pretext";
 
 const LINE_HEIGHT_RATIO = 1.12;
 
+const _canvas = document.createElement("canvas");
+const _ctx = _canvas.getContext("2d");
+
+export function measureTextWidth(text, style) {
+  _ctx.font = toCanvasFont(style);
+  return _ctx.measureText(text).width;
+}
+
+export function fillLine(char, maxWidth, style) {
+  const charWidth = measureTextWidth(char, style);
+  return char.repeat(Math.max(1, Math.floor(maxWidth / charWidth)));
+}
+
 export function createPretextWrapper() {
   const preparedCache = new Map();
 

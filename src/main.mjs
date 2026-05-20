@@ -15,6 +15,13 @@ document.getElementById("hamburger").addEventListener("click", () => {
   panel.hidden = !panel.hidden;
 });
 
+document.getElementById("loopToggle").addEventListener("click", (e) => {
+  const next = e.target.dataset.loop !== "true";
+  e.target.dataset.loop = String(next);
+  e.target.textContent = next ? "once" : "loop";
+  app.setLoop(next);
+});
+
 const toggle = document.getElementById("shapeToggle");
 const shapes = ["stadium", "ellipse"];
 

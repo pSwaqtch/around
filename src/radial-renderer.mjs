@@ -4,7 +4,7 @@ import {
   createStadiumShape,
   layoutShapeLines,
 } from "./article-layout.mjs";
-import { createPretextWrapper } from "./pretext-wrap.mjs";
+import { createPretextWrapper, fillLine } from "./pretext-wrap.mjs";
 
 const MIN_SCROLL_HEIGHT = 260;
 const LINES_PER_VIEWPORT = 80;
@@ -17,6 +17,7 @@ export function createRadialArticleApp({ disc, outerRing, innerRing, status, art
   let articleLines = [];
   let lineElements = [];
   let prevLineIndices = [];
+  let loopContent = false;
   const shapeFactories = {
     stadium: createStadiumShape,
     ellipse: createEllipseShape,
@@ -41,10 +42,12 @@ export function createRadialArticleApp({ disc, outerRing, innerRing, status, art
   }
 
   function buildLines() {
-    articleLines = buildArticleLines(articleText, {
-      maxWidth: shape.lineWidth - shapeOptions.linePadding * 2,
-      wrapText,
-    });
+    const maxWidth = shape.lineWidth - shapeOptions.linePadding * 2;
+    articleLines = buildArticleLines(articleText, { maxWidth, wrapText });
+
+    const sepStyle = { fontSize: 9, weight: 400, family: "Georgia, serif" };
+    const sepText = fillLine("=", maxWidth, sepStyle);
+    articleLines.push({ kind: "separator", text: sepText, fontSize: 9, weight: 400, italic: false });
   }
 
   function renderRadial() {
@@ -78,7 +81,7 @@ export function createRadialArticleApp({ disc, outerRing, innerRing, status, art
   function updateConveyorBelt() {
     const maxScroll = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
     const startT = latestScrollY / maxScroll;
-    const placed = layoutShapeLines(articleLines, shape, startT, MIN_LINE_SPACING);
+    const placed = layoutShapeLines(articleLines, shape, startT, MIN_LINE_SPACING, loopContent);
     const isJustify = shapeOptions.align === "justify";
 
     for (let i = 0; i < lineElements.length; i++) {
@@ -185,7 +188,13 @@ export function createRadialArticleApp({ disc, outerRing, innerRing, status, art
     rebuild();
   }
 
-  return { start, setShape, setOptions };
+  function setLoop(val) {
+    loopContent = val;
+    prevLineIndices = [];
+    updateConveyorBelt();
+  }
+
+  return { start, setShape, setOptions, setLoop };
 }
 
 // transform-origin: left center puts the CSS pivot at (0, fontSize/2) in element
