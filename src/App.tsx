@@ -30,6 +30,7 @@ export function App() {
   const [showGuides, setShowGuides] = useState(true);
   const [align, setAlign] = useState<RadialTextAlign>("left");
   const [fontPreset, setFontPreset] = useState<FontPreset>("serif");
+  const [seamWidth, setSeamWidth] = useState(1);
   const [demoOptionsByShape, setDemoOptionsByShape] = useState(INITIAL_DEMO_OPTIONS_BY_SHAPE);
   const demoOptions = demoOptionsByShape[shape];
   const sliders = useMemo(() => getDemoSliders(shape), [shape]);
@@ -66,6 +67,7 @@ export function App() {
         layout={radialLayout}
         typography={radialTypography}
         showGuides={showGuides}
+        seamWidth={seamWidth}
       />
 
       <aside className="controlDock" aria-label="Radial text controls">
@@ -130,6 +132,19 @@ export function App() {
                 ))}
               </div>
             </div>
+
+            <label className="sliderRow">
+              <span>seam</span>
+              <input
+                type="range"
+                min={0}
+                max={demoOptions.lineSpacing}
+                step={0.5}
+                value={seamWidth}
+                onChange={(e) => setSeamWidth(Number(e.currentTarget.value))}
+              />
+              <output>{seamWidth}</output>
+            </label>
 
             {sliders.map((slider) => (
               <label className="sliderRow" key={slider.id}>

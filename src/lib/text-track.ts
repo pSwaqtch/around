@@ -104,7 +104,8 @@ export function sampleTextTrackLines(
     return [];
   }
 
-  const numSlots = Math.ceil(track.length / minSpacing) + 1;
+  const usableLength = track.closed ? track.length - minSpacing : track.length;
+  const numSlots = Math.ceil(usableLength / minSpacing) + 1;
   const beltPos = loop
     ? positiveUnit(startT) * lines.length
     : clamp(startT, 0, 1) * lines.length;
@@ -116,7 +117,7 @@ export function sampleTextTrackLines(
     const distance = (i - frac) * minSpacing;
     const lineIndex = loop ? (firstIdx + i) % lines.length : firstIdx + i;
 
-    if (distance < 0 || distance >= track.length || lineIndex < 0 || lineIndex >= lines.length) {
+    if (distance < 0 || distance >= usableLength || lineIndex < 0 || lineIndex >= lines.length) {
       result.push(null);
       continue;
     }

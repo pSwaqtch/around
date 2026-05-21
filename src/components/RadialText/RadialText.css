@@ -72,3 +72,11 @@
 .radialText__line--separator {
   color: #a8ada8;
 }
+
+.radialText__seamLine {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform-origin: left center;
+  pointer-events: none;
+}

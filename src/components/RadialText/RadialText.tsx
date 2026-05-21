@@ -63,6 +63,7 @@ export interface RadialTextProps {
   typography?: RadialTextTypography;
   className?: string;
   showGuides?: boolean;
+  seamWidth?: number;
 }
 
 interface ResolvedRadialTextGeometry {
@@ -166,6 +167,7 @@ export function RadialText({
   typography,
   className,
   showGuides = true,
+  seamWidth = 1,
 }: RadialTextProps) {
   const discRef = useRef<HTMLDivElement | null>(null);
   const guideSvgRef = useRef<SVGSVGElement | null>(null);
@@ -201,6 +203,12 @@ export function RadialText({
     const guideSvgElement = guideSvg;
     const guidePathElement = guidePath;
     const outerGuidePathElement = outerGuidePath;
+    const seamDivEnd = document.createElement("div");
+    seamDivEnd.className = "radialText__seamLine";
+    discElement.appendChild(seamDivEnd);
+    const seamDivStart = document.createElement("div");
+    seamDivStart.className = "radialText__seamLine";
+    discElement.appendChild(seamDivStart);
     const wrapText = createPretextWrapper();
     let disposed = false;
     let articleLines: ArticleLine[] = [];
@@ -224,6 +232,16 @@ export function RadialText({
       );
       guidePathElement.setAttribute("d", activeTrack.guidePath);
       outerGuidePathElement.setAttribute("d", activeTrack.outerGuidePath);
+
+      const sEnd = activeTrack.closed
+        ? activeTrack.sampleAt(activeTrack.length - resolvedConfig.lineSpacing / 2)
+        : activeTrack.sampleAt(activeTrack.length);
+      const sStart = activeTrack.closed
+        ? sEnd
+        : activeTrack.sampleAt(0);
+
+      placeSeamDiv(seamDivEnd, sEnd, seamWidth, seamWidth, "linear-gradient(to right, transparent, #171717)", "-1");
+      placeSeamDiv(seamDivStart, sStart, seamWidth, 0, "linear-gradient(to right, #171717, transparent)", "1");
     }
 
     function buildLines() {
@@ -360,6 +378,8 @@ export function RadialText({
       window.cancelAnimationFrame(tickFrame);
       window.cancelAnimationFrame(resizeFrame);
       discElement.querySelectorAll(".radialText__line").forEach((element) => element.remove());
+      seamDivEnd.remove();
+      seamDivStart.remove();
     };
   }, [
     geometry,
@@ -369,6 +389,7 @@ export function RadialText({
     text,
     typography,
     resolvedConfig,
+    seamWidth,
   ]);
 
   return (
@@ -384,11 +405,35 @@ export function RadialText({
   );
 }
 
+function placeSeamDiv(
+  el: HTMLDivElement,
+  s: { x: number; y: number; angleDeg: number; tangentDeg: number; lineWidth: number },
+  width: number,
+  backOffset: number,
+  gradient: string,
+  zIndex: string,
+) {
+  const angleRad = (s.angleDeg * Math.PI) / 180;
+  const tanRad = (s.tangentDeg * Math.PI) / 180;
+  const cx = s.x + Math.cos(angleRad) * s.lineWidth / 2;
+  const cy = s.y + Math.sin(angleRad) * s.lineWidth / 2;
+  const x = cx - Math.cos(tanRad) * backOffset;
+  const y = cy - Math.sin(tanRad) * backOffset;
+
+  el.style.width = `${width}px`;
+  el.style.height = `${s.lineWidth}px`;
+  el.style.transform = `translate(${x}px, ${y - s.lineWidth / 2}px) rotate(${s.tangentDeg}deg)`;
+  el.style.background = gradient;
+  el.style.zIndex = zIndex;
+  el.style.display = "";
+}
+
 function lineTransform(line: { x: number; y: number; fontSize: number; angleDeg: number }) {
   const pivotAdjY = line.y - line.fontSize / 2;
 
   return `translate(${line.x}px, ${pivotAdjY}px) rotate(${line.angleDeg}deg)`;
 }
+
 
 function resolveRadialTextConfig(
   geometry: RadialTextGeometry | undefined,
