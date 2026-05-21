@@ -234,14 +234,12 @@ export function RadialText({
       outerGuidePathElement.setAttribute("d", activeTrack.outerGuidePath);
 
       const sEnd = activeTrack.closed
-        ? activeTrack.sampleAt(activeTrack.length - resolvedConfig.lineSpacing / 2)
+        ? activeTrack.sampleAt(activeTrack.length - resolvedConfig.lineSpacing)
         : activeTrack.sampleAt(activeTrack.length);
-      const sStart = activeTrack.closed
-        ? sEnd
-        : activeTrack.sampleAt(0);
+      const sStart = activeTrack.sampleAt(0);
 
-      placeSeamDiv(seamDivEnd, sEnd, seamWidth, seamWidth, "linear-gradient(to right, transparent, #171717)", "-1");
-      placeSeamDiv(seamDivStart, sStart, seamWidth, 0, "linear-gradient(to right, #171717, transparent)", "1");
+      placeSeamDiv(seamDivEnd, sEnd, seamWidth, "linear-gradient(to bottom, transparent, #171717)", "-1");
+      placeSeamDiv(seamDivStart, sStart, seamWidth, "linear-gradient(to bottom, #171717, transparent)", "1");
     }
 
     function buildLines() {
@@ -407,22 +405,14 @@ export function RadialText({
 
 function placeSeamDiv(
   el: HTMLDivElement,
-  s: { x: number; y: number; angleDeg: number; tangentDeg: number; lineWidth: number },
-  width: number,
-  backOffset: number,
+  s: { x: number; y: number; angleDeg: number; lineWidth: number },
+  seamWidth: number,
   gradient: string,
   zIndex: string,
 ) {
-  const angleRad = (s.angleDeg * Math.PI) / 180;
-  const tanRad = (s.tangentDeg * Math.PI) / 180;
-  const cx = s.x + Math.cos(angleRad) * s.lineWidth / 2;
-  const cy = s.y + Math.sin(angleRad) * s.lineWidth / 2;
-  const x = cx - Math.cos(tanRad) * backOffset;
-  const y = cy - Math.sin(tanRad) * backOffset;
-
-  el.style.width = `${width}px`;
-  el.style.height = `${s.lineWidth}px`;
-  el.style.transform = `translate(${x}px, ${y - s.lineWidth / 2}px) rotate(${s.tangentDeg}deg)`;
+  el.style.width = `${s.lineWidth}px`;
+  el.style.height = `${seamWidth}px`;
+  el.style.transform = `translate(${s.x}px, ${s.y - seamWidth / 2}px) rotate(${s.angleDeg}deg)`;
   el.style.background = gradient;
   el.style.zIndex = zIndex;
   el.style.display = "";

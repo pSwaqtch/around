@@ -20,7 +20,6 @@ export const SHAPE_OPTIONS: Array<{ id: RadialShapeKind; label: string }> = [
 export interface DemoOptions {
   widthRatio: number;
   heightRatio: number;
-  trackThickness: number;
   textInset: number;
   cornerRadius: number;
   lineSpacing: number;
@@ -76,14 +75,6 @@ const SLIDER_REGISTRY = {
     label: "height",
     min: 30,
     max: 100,
-    step: 1,
-    display: (value) => `${value}`,
-  },
-  trackThickness: {
-    id: "trackThickness",
-    label: "track",
-    min: 3,
-    max: 85,
     step: 1,
     display: (value) => `${value}`,
   },
@@ -159,7 +150,7 @@ const SLIDER_REGISTRY = {
     step: 1,
     display: (value) => `${value}`,
   },
-} satisfies Record<keyof Omit<DemoOptions, "textInset" | "lineSpacing">, SliderConfig>;
+} satisfies Partial<Record<keyof DemoOptions, SliderConfig>>;
 
 export const DEMO_SLIDERS: SliderConfig[] = [
   {
@@ -175,14 +166,6 @@ export const DEMO_SLIDERS: SliderConfig[] = [
     label: "height",
     min: 30,
     max: 100,
-    step: 1,
-    display: (value) => `${value}`,
-  },
-  {
-    id: "trackThickness",
-    label: "track",
-    min: 10,
-    max: 85,
     step: 1,
     display: (value) => `${value}`,
   },
@@ -219,7 +202,6 @@ export function getDemoSliders(shape: RadialShapeKind): SliderConfig[] {
         SLIDER_REGISTRY.scale,
         SLIDER_REGISTRY.turns,
         SLIDER_REGISTRY.innerRadius,
-        SLIDER_REGISTRY.trackThickness,
         ...COMMON_LAYOUT_SLIDERS,
       ];
     case "wave":
@@ -227,7 +209,6 @@ export function getDemoSliders(shape: RadialShapeKind): SliderConfig[] {
         SLIDER_REGISTRY.widthRatio,
         SLIDER_REGISTRY.amplitude,
         SLIDER_REGISTRY.cycles,
-        SLIDER_REGISTRY.trackThickness,
         ...COMMON_LAYOUT_SLIDERS,
       ];
     case "blob":
@@ -236,13 +217,11 @@ export function getDemoSliders(shape: RadialShapeKind): SliderConfig[] {
         SLIDER_REGISTRY.heightRatio,
         SLIDER_REGISTRY.wobble,
         SLIDER_REGISTRY.lobes,
-        SLIDER_REGISTRY.trackThickness,
         ...COMMON_LAYOUT_SLIDERS,
       ];
     case "svg-path":
       return [
         SLIDER_REGISTRY.pathScale,
-        SLIDER_REGISTRY.trackThickness,
         ...COMMON_LAYOUT_SLIDERS,
       ];
     case "stadium":
@@ -254,7 +233,6 @@ export function getDemoSliders(shape: RadialShapeKind): SliderConfig[] {
 export const INITIAL_DEMO_OPTIONS: DemoOptions = {
   widthRatio: 90,
   heightRatio: 90,
-  trackThickness: 56,
   textInset: 6,
   cornerRadius: 100,
   lineSpacing: 12,
@@ -276,14 +254,12 @@ export const INITIAL_DEMO_OPTIONS_BY_SHAPE: Record<RadialShapeKind, DemoOptions>
     scale: 76,
     turns: 29,
     innerRadius: 18,
-    trackThickness: 18,
   },
   wave: {
     ...INITIAL_DEMO_OPTIONS,
     widthRatio: 90,
     amplitude: 32,
     cycles: 24,
-    trackThickness: 16,
   },
   blob: {
     ...INITIAL_DEMO_OPTIONS,
@@ -291,12 +267,10 @@ export const INITIAL_DEMO_OPTIONS_BY_SHAPE: Record<RadialShapeKind, DemoOptions>
     heightRatio: 78,
     wobble: 16,
     lobes: 5,
-    trackThickness: 20,
   },
   "svg-path": {
     ...INITIAL_DEMO_OPTIONS,
     pathScale: 100,
-    trackThickness: 16,
   },
 };
 
@@ -348,7 +322,6 @@ export function createRadialGeometry(shape: RadialShapeKind, demoOptions: Partia
         stadium: {
           widthRatio: ratio(demoOptions.widthRatio, defaults.widthRatio),
           heightRatio: ratio(demoOptions.heightRatio, defaults.heightRatio),
-          trackThickness: ratio(demoOptions.trackThickness, defaults.trackThickness),
           cornerRadius: ratio(demoOptions.cornerRadius, defaults.cornerRadius),
         },
       };
@@ -357,7 +330,6 @@ export function createRadialGeometry(shape: RadialShapeKind, demoOptions: Partia
         ellipse: {
           widthRatio: ratio(demoOptions.widthRatio, defaults.widthRatio),
           heightRatio: ratio(demoOptions.heightRatio, defaults.heightRatio),
-          trackThickness: ratio(demoOptions.trackThickness, defaults.trackThickness),
         },
       };
     case "spiral":
@@ -366,7 +338,6 @@ export function createRadialGeometry(shape: RadialShapeKind, demoOptions: Partia
           scale: ratio(demoOptions.scale, defaults.scale),
           turns: (demoOptions.turns ?? defaults.turns) / 10,
           innerRadiusRatio: ratio(demoOptions.innerRadius, defaults.innerRadius),
-          trackThickness: ratio(demoOptions.trackThickness, defaults.trackThickness),
         },
       };
     case "wave":
@@ -375,7 +346,6 @@ export function createRadialGeometry(shape: RadialShapeKind, demoOptions: Partia
           widthRatio: ratio(demoOptions.widthRatio, defaults.widthRatio),
           amplitudeRatio: ratio(demoOptions.amplitude, defaults.amplitude),
           cycles: (demoOptions.cycles ?? defaults.cycles) / 10,
-          trackThickness: ratio(demoOptions.trackThickness, defaults.trackThickness),
         },
       };
     case "blob":
@@ -385,14 +355,12 @@ export function createRadialGeometry(shape: RadialShapeKind, demoOptions: Partia
           heightRatio: ratio(demoOptions.heightRatio, defaults.heightRatio),
           wobble: ratio(demoOptions.wobble, defaults.wobble),
           lobes: demoOptions.lobes ?? defaults.lobes,
-          trackThickness: ratio(demoOptions.trackThickness, defaults.trackThickness),
         },
       };
     case "svg-path":
       return {
         svgPath: {
           scale: ratio(demoOptions.pathScale, defaults.pathScale),
-          trackThickness: ratio(demoOptions.trackThickness, defaults.trackThickness),
         },
       };
   }

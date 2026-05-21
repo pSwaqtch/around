@@ -149,20 +149,12 @@ export function createStadiumTrack(
   const outerRadius = Math.min(outerHalfW, outerHalfH) * geometry.cornerRadius;
   const outerArcOffsetX = Math.max(0, outerHalfW - outerRadius);
   const outerArcOffsetY = Math.max(0, outerHalfH - outerRadius);
-  const nodes = sampleParametric(720, true, (t) => {
-    const point = roundedRectPoint(t, arcOffsetX, arcOffsetY, radius);
-
-    return {
-      ...point,
-      lineWidth: trackWidth,
-    };
-  });
-  const outerNodes = sampleParametric(720, true, (t) => ({
-    ...roundedRectPoint(t, outerArcOffsetX, outerArcOffsetY, outerRadius),
+  const nodes = sampleParametric(720, true, (t) => ({
+    ...roundedRectPoint(t, arcOffsetX, arcOffsetY, radius),
     lineWidth: trackWidth,
   }));
 
-  return buildTrack("stadium", nodes, true, trackWidth, pathFromNodes(nodes, true), pathFromNodes(outerNodes, true));
+  return buildTrack("stadium", nodes, true, trackWidth, pathFromNodes(nodes, true), pathFromNodes(offsetNodesByAngle(nodes, trackWidth), true));
 }
 
 export function createEllipseTrack(
@@ -187,27 +179,16 @@ export function createEllipseTrack(
     const gl = Math.hypot(gx, gy) || 1;
     const nx = gx / gl;
     const ny = gy / gl;
-    const lineWidth = Math.min(trackWidth, ellipseRayDist(x, y, nx, ny, outerA, outerB));
 
     return {
       x,
       y,
       angleDeg: Math.atan2(ny, nx) * 180 / Math.PI,
-      lineWidth,
-    };
-  });
-  const outerNodes = sampleParametric(960, true, (t) => {
-    const angle = t * Math.PI * 2 - Math.PI / 2;
-
-    return {
-      x: outerA * Math.cos(angle),
-      y: outerB * Math.sin(angle),
-      angleDeg: angle * 180 / Math.PI,
       lineWidth: trackWidth,
     };
   });
 
-  return buildTrack("ellipse", nodes, true, trackWidth, pathFromNodes(nodes, true), pathFromNodes(outerNodes, true));
+  return buildTrack("ellipse", nodes, true, trackWidth, pathFromNodes(nodes, true), pathFromNodes(offsetNodesByAngle(nodes, trackWidth), true));
 }
 
 export function createSpiralTrack(
@@ -273,7 +254,7 @@ export function createBlobTrack(
   const baseB = Math.max(1, geometry.outerHalfH - geometry.trackWidth);
   const wobble = clamp(options.wobble ?? 0.16, 0, 0.45);
   const lobes = Math.max(2, Math.round(clamp(options.lobes ?? 5, 2, 12)));
-  const nodes = sampleParametric(960, true, (t) => {
+  const blobInner = sampleParametric(960, true, (t) => {
     const theta = t * Math.PI * 2 - Math.PI / 2;
     const radiusScale = 1
       + wobble * Math.sin(theta * lobes + 0.6)
@@ -286,8 +267,16 @@ export function createBlobTrack(
       lineWidth: geometry.trackWidth,
     };
   });
+  const blobOuter = offsetNodesByAngle(blobInner, geometry.trackWidth);
+  const nodes = blobInner.map((node) => {
+    const nearest = blobOuter.reduce((best, o) =>
+      Math.hypot(o.x - node.x, o.y - node.y) < Math.hypot(best.x - node.x, best.y - node.y) ? o : best
+    );
 
-  return buildTrack("blob", nodes, true, geometry.trackWidth, pathFromNodes(nodes, true), pathFromNodes(offsetNodesByAngle(nodes, geometry.trackWidth), true));
+    return { ...node, lineWidth: Math.hypot(nearest.x - node.x, nearest.y - node.y) };
+  });
+
+  return buildTrack("blob", nodes, true, geometry.trackWidth, pathFromNodes(nodes, true), pathFromNodes(blobOuter, true));
 }
 
 export function createSvgPolylineTrack(
@@ -365,14 +354,14 @@ function buildTrack(
 function sampleParametric(
   count: number,
   closed: boolean,
-  sample: (t: number) => Omit<TrackNode, "tangentDeg">,
+  sample: (t: number, i: number) => Omit<TrackNode, "tangentDeg">,
 ): TrackNode[] {
   const points: TrackNode[] = [];
   const end = closed ? count : count - 1;
 
   for (let i = 0; i <= end; i += 1) {
     const t = i / count;
-    const point = sample(t);
+    const point = sample(t, i);
     points.push({ ...point, tangentDeg: 0 });
   }
 
@@ -475,6 +464,47 @@ function roundedRectPoint(t: number, arcOffsetX: number, arcOffsetY: number, rad
   const alpha = 180 + (s / quarterArc) * 90;
   const rad = alpha * Math.PI / 180;
   return { x: -arcOffsetX + radius * Math.cos(rad), y: -arcOffsetY + radius * Math.sin(rad), angleDeg: alpha };
+}
+
+function rayDistToEllipse(px: number, py: number, nx: number, ny: number, a: number, b: number, maxDist: number): number {
+  let lo = 0;
+  let hi = maxDist;
+
+  for (let i = 0; i < 24; i++) {
+    const mid = (lo + hi) / 2;
+    const tx = px + nx * mid;
+    const ty = py + ny * mid;
+
+    if (tx * tx / (a * a) + ty * ty / (b * b) >= 1) {
+      hi = mid;
+    } else {
+      lo = mid;
+    }
+  }
+
+  return (lo + hi) / 2;
+}
+
+function rayDistToRoundedRect(px: number, py: number, nx: number, ny: number, arcOffsetX: number, arcOffsetY: number, radius: number, maxDist: number): number {
+  let lo = 0;
+  let hi = maxDist;
+
+  for (let i = 0; i < 24; i++) {
+    const mid = (lo + hi) / 2;
+    const tx = Math.abs(px + nx * mid);
+    const ty = Math.abs(py + ny * mid);
+    const cx = Math.max(tx - arcOffsetX, 0);
+    const cy = Math.max(ty - arcOffsetY, 0);
+    const outside = Math.hypot(cx, cy) >= radius;
+
+    if (outside) {
+      hi = mid;
+    } else {
+      lo = mid;
+    }
+  }
+
+  return (lo + hi) / 2;
 }
 
 function ellipseRayDist(px: number, py: number, nx: number, ny: number, a: number, b: number) {
