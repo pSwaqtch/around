@@ -146,9 +146,6 @@ export function createStadiumTrack(
   const radius = Math.min(innerHalfW, innerHalfH) * geometry.cornerRadius;
   const arcOffsetX = Math.max(0, innerHalfW - radius);
   const arcOffsetY = Math.max(0, innerHalfH - radius);
-  const outerRadius = Math.min(outerHalfW, outerHalfH) * geometry.cornerRadius;
-  const outerArcOffsetX = Math.max(0, outerHalfW - outerRadius);
-  const outerArcOffsetY = Math.max(0, outerHalfH - outerRadius);
   const nodes = sampleParametric(720, true, (t) => ({
     ...roundedRectPoint(t, arcOffsetX, arcOffsetY, radius),
     lineWidth: trackWidth,
@@ -464,56 +461,6 @@ function roundedRectPoint(t: number, arcOffsetX: number, arcOffsetY: number, rad
   const alpha = 180 + (s / quarterArc) * 90;
   const rad = alpha * Math.PI / 180;
   return { x: -arcOffsetX + radius * Math.cos(rad), y: -arcOffsetY + radius * Math.sin(rad), angleDeg: alpha };
-}
-
-function rayDistToEllipse(px: number, py: number, nx: number, ny: number, a: number, b: number, maxDist: number): number {
-  let lo = 0;
-  let hi = maxDist;
-
-  for (let i = 0; i < 24; i++) {
-    const mid = (lo + hi) / 2;
-    const tx = px + nx * mid;
-    const ty = py + ny * mid;
-
-    if (tx * tx / (a * a) + ty * ty / (b * b) >= 1) {
-      hi = mid;
-    } else {
-      lo = mid;
-    }
-  }
-
-  return (lo + hi) / 2;
-}
-
-function rayDistToRoundedRect(px: number, py: number, nx: number, ny: number, arcOffsetX: number, arcOffsetY: number, radius: number, maxDist: number): number {
-  let lo = 0;
-  let hi = maxDist;
-
-  for (let i = 0; i < 24; i++) {
-    const mid = (lo + hi) / 2;
-    const tx = Math.abs(px + nx * mid);
-    const ty = Math.abs(py + ny * mid);
-    const cx = Math.max(tx - arcOffsetX, 0);
-    const cy = Math.max(ty - arcOffsetY, 0);
-    const outside = Math.hypot(cx, cy) >= radius;
-
-    if (outside) {
-      hi = mid;
-    } else {
-      lo = mid;
-    }
-  }
-
-  return (lo + hi) / 2;
-}
-
-function ellipseRayDist(px: number, py: number, nx: number, ny: number, a: number, b: number) {
-  const A = nx * nx / (a * a) + ny * ny / (b * b);
-  const B = 2 * (px * nx / (a * a) + py * ny / (b * b));
-  const C = px * px / (a * a) + py * py / (b * b) - 1;
-  const disc = B * B - 4 * A * C;
-
-  return disc <= 0 ? 0 : (-B + Math.sqrt(disc)) / (2 * A);
 }
 
 function pathFromNodes(nodes: Array<{ x: number; y: number }>, closed: boolean) {

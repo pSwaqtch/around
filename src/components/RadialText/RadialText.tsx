@@ -363,6 +363,8 @@ export function RadialText({
       rebuild();
     } else {
       discElement.querySelectorAll(".radialText__line").forEach((element) => element.remove());
+      seamDivEnd.style.display = "none";
+      seamDivStart.style.display = "none";
       setScrollHeightVh(resolvedConfig.minScrollHeightVh);
     }
 
