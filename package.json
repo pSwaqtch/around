@@ -1,8 +1,11 @@
 {
-  "name": "around",
+  "name": "@pswaqtch/around",
   "version": "0.1.0",
   "type": "module",
   "files": ["dist"],
+  "publishConfig": {
+    "access": "public"
+  },
   "main": "./dist/index.js",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -17,7 +20,8 @@
     "dev": "vite --host 127.0.0.1",
     "build": "tsup",
     "build:demo": "tsc && vite build",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "release": "npm run build && npm version patch && npm publish --access public"
   },
   "peerDependencies": {
     "react": ">=18",
