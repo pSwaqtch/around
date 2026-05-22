@@ -47,7 +47,7 @@
   box-sizing: border-box;
   padding-left: 0;
   padding-right: 0;
-  color: #171717;
+  color: var(--radial-text-color, #171717);
   font-size: 9px;
   line-height: 1;
   text-align-last: inherit;
@@ -71,12 +71,4 @@
 
 .radialText__line--separator {
   color: #a8ada8;
-}
-
-.radialText__seamLine {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  transform-origin: left center;
-  pointer-events: none;
 }

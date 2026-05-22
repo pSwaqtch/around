@@ -1,24 +1,40 @@
 {
-  "name": "radial-text",
-  "private": true,
+  "name": "around",
   "version": "0.1.0",
   "type": "module",
+  "files": ["dist"],
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./style.css": "./dist/index.css"
+  },
   "scripts": {
     "dev": "vite --host 127.0.0.1",
-    "build": "tsc && vite build",
+    "build": "tsup",
+    "build:demo": "tsc && vite build",
     "typecheck": "tsc --noEmit"
+  },
+  "peerDependencies": {
+    "react": ">=18",
+    "react-dom": ">=18"
   },
   "dependencies": {
     "@chenglou/pretext": "^0.0.7",
-    "html2canvas": "^1.4.1",
-    "react": "^19.2.6",
-    "react-dom": "^19.2.6",
-    "vite": "^7.2.4"
+    "html2canvas": "^1.4.1"
   },
   "devDependencies": {
     "@types/html2canvas": "^1.0.0",
     "@types/react": "^19.2.15",
     "@types/react-dom": "^19.2.3",
-    "typescript": "^6.0.3"
+    "react": "^19.2.6",
+    "react-dom": "^19.2.6",
+    "tsup": "^8.5.1",
+    "typescript": "^6.0.3",
+    "vite": "^7.2.4"
   }
 }

@@ -1,4 +1,5 @@
 import { useEffect, useImperativeHandle, useMemo, useRef, useState, type CSSProperties, type Ref } from "react";
+import "./RadialText.css";
 
 import {
   buildArticleLines,
@@ -71,8 +72,8 @@ export interface RadialTextProps {
   typography?: RadialTextTypography;
   className?: string;
   showGuides?: boolean;
-  seamWidth?: number;
   discBg?: string;
+  textColor?: string;
   /** Optional ref to receive imperative access to disc and root elements. */
   ref?: Ref<RadialTextHandle>;
 }
@@ -178,8 +179,8 @@ export function RadialText({
   typography,
   className,
   showGuides = true,
-  seamWidth = 1,
-  discBg = "#171717",
+  discBg,
+  textColor,
   ref,
 }: RadialTextProps) {
   const rootRef = useRef<HTMLDivElement | null>(null);
@@ -233,13 +234,7 @@ export function RadialText({
     const guideSvgElement = guideSvg;
     const guidePathElement = guidePath;
     const outerGuidePathElement = outerGuidePath;
-    const seamDivEnd = document.createElement("div");
-    seamDivEnd.className = "radialText__seamLine";
-    discElement.appendChild(seamDivEnd);
-    const seamDivStart = document.createElement("div");
-    seamDivStart.className = "radialText__seamLine";
-    discElement.appendChild(seamDivStart);
-    const wrapText = createPretextWrapper();
+const wrapText = createPretextWrapper();
     let disposed = false;
     let articleLines: ArticleLine[] = [];
     let lineElements: HTMLDivElement[] = [];
@@ -263,12 +258,6 @@ export function RadialText({
       guidePathElement.setAttribute("d", activeTrack.guidePath);
       outerGuidePathElement.setAttribute("d", activeTrack.outerGuidePath);
 
-      const sEnd = activeTrack.closed
-        ? activeTrack.sampleAt(activeTrack.length - resolvedConfig.lineSpacing)
-        : activeTrack.sampleAt(activeTrack.length);
-      const sStart = activeTrack.sampleAt(0);
-      placeSeamDiv(seamDivEnd, sEnd, seamWidth, `linear-gradient(to bottom, transparent, ${discBg})`, "-1");
-      placeSeamDiv(seamDivStart, sStart, seamWidth, `linear-gradient(to bottom, ${discBg}, transparent)`, "1");
     }
 
     function buildLines() {
@@ -392,9 +381,7 @@ export function RadialText({
       rebuild();
     } else {
       discElement.querySelectorAll(".radialText__line").forEach((element) => element.remove());
-      seamDivEnd.style.display = "none";
-      seamDivStart.style.display = "none";
-      setScrollHeightVh(resolvedConfig.minScrollHeightVh);
+setScrollHeightVh(resolvedConfig.minScrollHeightVh);
     }
 
     window.addEventListener("scroll", requestConveyorUpdate, { passive: true });
@@ -407,8 +394,7 @@ export function RadialText({
       window.cancelAnimationFrame(tickFrame);
       window.cancelAnimationFrame(resizeFrame);
       discElement.querySelectorAll(".radialText__line").forEach((element) => element.remove());
-      seamDivEnd.remove();
-      seamDivStart.remove();
+
     };
   }, [
     geometry,
@@ -418,13 +404,18 @@ export function RadialText({
     text,
     typography,
     resolvedConfig,
-    seamWidth,
-    discBg,
   ]);
 
   return (
     <div className={rootClassName} style={style} ref={rootRef}>
-      <div className="radialText__disc" ref={discRef}>
+      <div
+        className="radialText__disc"
+        ref={discRef}
+        style={{
+          ...(discBg != null ? { background: discBg } : {}),
+          "--radial-text-color": textColor,
+        } as CSSProperties}
+      >
         <svg className="radialText__guides" ref={guideSvgRef} aria-hidden="true">
           <path className="radialText__guidePath radialText__guidePath--outer" ref={outerGuidePathRef} />
           <path className="radialText__guidePath" ref={guidePathRef} />
@@ -435,20 +426,6 @@ export function RadialText({
   );
 }
 
-function placeSeamDiv(
-  el: HTMLDivElement,
-  s: { x: number; y: number; angleDeg: number; lineWidth: number },
-  height: number,
-  gradient: string,
-  zIndex: string,
-) {
-  el.style.width = `${s.lineWidth}px`;
-  el.style.height = `${height}px`;
-  el.style.transform = `translate(${s.x}px, ${s.y - height / 2}px) rotate(${s.angleDeg}deg)`;
-  el.style.background = gradient;
-  el.style.zIndex = zIndex;
-  el.style.display = "";
-}
 
 function lineTransform(line: { x: number; y: number; fontSize: number; angleDeg: number }) {
   const pivotAdjY = line.y - line.fontSize / 2;

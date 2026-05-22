@@ -21,6 +21,7 @@ import {
   type FontPreset,
 } from "./demo/radial-demo-options.js";
 import { exportDiscAsPng } from "./lib/export-disc.js";
+import { exportDiscAsSvg } from "./lib/export-disc-svg.js";
 import type { RadialTextAlign } from "./lib/article-layout.js";
 
 const ALIGNMENTS: RadialTextAlign[] = ["left", "justify", "right"];
@@ -34,7 +35,7 @@ export function App() {
   const [showGuides, setShowGuides] = useState(true);
   const [align, setAlign] = useState<RadialTextAlign>("left");
   const [fontPreset, setFontPreset] = useState<FontPreset>("serif");
-  const [seamWidth, setSeamWidth] = useState(1);
+  const [darkMode, setDarkMode] = useState(false);
   const [demoOptionsByShape, setDemoOptionsByShape] = useState(INITIAL_DEMO_OPTIONS_BY_SHAPE);
   const demoOptions = demoOptionsByShape[shape];
   const sliders = useMemo(() => getDemoSliders(shape), [shape]);
@@ -61,7 +62,7 @@ export function App() {
     }));
   }
 
-  async function handleExport() {
+  async function handleExportPng() {
     if (isExporting || !radialTextRef.current) return;
     setIsExporting(true);
     try {
@@ -70,6 +71,11 @@ export function App() {
     } finally {
       setIsExporting(false);
     }
+  }
+
+  function handleExportSvg() {
+    if (!radialTextRef.current) return;
+    exportDiscAsSvg(radialTextRef.current.discEl, `radial-text-${shape}.svg`);
   }
 
   return (
@@ -83,7 +89,8 @@ export function App() {
         layout={radialLayout}
         typography={radialTypography}
         showGuides={showGuides}
-        seamWidth={seamWidth}
+        discBg={darkMode ? "#1c1c1e" : undefined}
+        textColor={darkMode ? "#e5e5ea" : undefined}
       />
 
       <aside className="controlDock" aria-label="Radial text controls">
@@ -135,13 +142,27 @@ export function App() {
 
             <div className="switchRow">
               <button
+                className={darkMode ? "toggleButton isActive" : "toggleButton"}
+                type="button"
+                aria-pressed={darkMode}
+                onClick={() => setDarkMode((d) => !d)}
+              >
+                dark
+              </button>
+              <button
                 className="toggleButton"
                 type="button"
                 disabled={isExporting}
-                onClick={handleExport}
-                style={{ gridColumn: "1 / -1" }}
+                onClick={handleExportPng}
               >
-                {isExporting ? "exporting…" : "export png"}
+                {isExporting ? "exporting…" : "png"}
+              </button>
+              <button
+                className="toggleButton"
+                type="button"
+                onClick={handleExportSvg}
+              >
+                svg
               </button>
             </div>
 
@@ -161,20 +182,7 @@ export function App() {
               </div>
             </div>
 
-            <label className="sliderRow">
-              <span>seam</span>
-              <input
-                type="range"
-                min={0}
-                max={demoOptions.lineSpacing}
-                step={0.5}
-                value={seamWidth}
-                onChange={(e) => setSeamWidth(Number(e.currentTarget.value))}
-              />
-              <output>{seamWidth}</output>
-            </label>
-
-            {sliders.map((slider) => (
+{sliders.map((slider) => (
               <label className="sliderRow" key={slider.id}>
                 <span>{slider.label}</span>
                 <input
