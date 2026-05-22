@@ -1,8 +1,10 @@
 {
   "name": "@pswaqtch/around",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "type": "module",
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "publishConfig": {
     "access": "public"
   },
