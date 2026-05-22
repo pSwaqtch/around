@@ -32,6 +32,8 @@ export interface TextTrack {
 export interface StadiumTrackOptions {
   widthRatio?: number;
   heightRatio?: number;
+  innerWidthRatio?: number;
+  innerHeightRatio?: number;
   trackThickness?: number;
   cornerRadius?: number;
 }
@@ -39,6 +41,8 @@ export interface StadiumTrackOptions {
 export interface EllipseTrackOptions {
   widthRatio?: number;
   heightRatio?: number;
+  innerWidthRatio?: number;
+  innerHeightRatio?: number;
   trackThickness?: number;
 }
 
@@ -140,9 +144,13 @@ export function createStadiumTrack(
   const geometry = resolveGeometry(viewportWidth, viewportHeight, options);
   const outerHalfW = geometry.outerHalfW;
   const outerHalfH = geometry.outerHalfH;
-  const trackWidth = geometry.trackWidth;
-  const innerHalfW = Math.max(1, outerHalfW - trackWidth);
-  const innerHalfH = Math.max(1, outerHalfH - trackWidth);
+  const innerHalfW = options.innerWidthRatio != null
+    ? Math.max(1, Math.floor(viewportWidth / 2 * clamp(options.innerWidthRatio, 0.05, 1)) - DISC_MARGIN)
+    : Math.max(1, outerHalfW - geometry.trackWidth);
+  const innerHalfH = options.innerHeightRatio != null
+    ? Math.max(1, Math.floor(viewportHeight / 2 * clamp(options.innerHeightRatio, 0.05, 1)) - DISC_MARGIN)
+    : Math.max(1, outerHalfH - geometry.trackWidth);
+  const trackWidth = Math.min(outerHalfW - innerHalfW, outerHalfH - innerHalfH);
   const radius = Math.min(innerHalfW, innerHalfH) * geometry.cornerRadius;
   const arcOffsetX = Math.max(0, innerHalfW - radius);
   const arcOffsetY = Math.max(0, innerHalfH - radius);
@@ -162,9 +170,13 @@ export function createEllipseTrack(
   const geometry = resolveGeometry(viewportWidth, viewportHeight, options);
   const outerA = geometry.outerHalfW;
   const outerB = geometry.outerHalfH;
-  const trackWidth = geometry.trackWidth;
-  const innerA = Math.max(1, outerA - trackWidth);
-  const innerB = Math.max(1, outerB - trackWidth);
+  const innerA = options.innerWidthRatio != null
+    ? Math.max(1, Math.floor(viewportWidth / 2 * clamp(options.innerWidthRatio, 0.05, 1)) - DISC_MARGIN)
+    : Math.max(1, outerA - geometry.trackWidth);
+  const innerB = options.innerHeightRatio != null
+    ? Math.max(1, Math.floor(viewportHeight / 2 * clamp(options.innerHeightRatio, 0.05, 1)) - DISC_MARGIN)
+    : Math.max(1, outerB - geometry.trackWidth);
+  const trackWidth = Math.min(outerA - innerA, outerB - innerB);
   const nodes = sampleParametric(960, true, (t) => {
     const angle = t * Math.PI * 2 - Math.PI / 2;
     const cosA = Math.cos(angle);

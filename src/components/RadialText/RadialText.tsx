@@ -179,7 +179,7 @@ export function RadialText({
   className,
   showGuides = true,
   seamWidth = 1,
-  discBg = "#f3f4f2",
+  discBg = "#171717",
   ref,
 }: RadialTextProps) {
   const rootRef = useRef<HTMLDivElement | null>(null);
@@ -267,13 +267,8 @@ export function RadialText({
         ? activeTrack.sampleAt(activeTrack.length - resolvedConfig.lineSpacing)
         : activeTrack.sampleAt(activeTrack.length);
       const sStart = activeTrack.sampleAt(0);
-      const isClosed = activeTrack.closed;
-      const gapHeight = isClosed ? resolvedConfig.lineSpacing / 2 : seamWidth;
-      const endYOffset = isClosed ? 0 : -seamWidth / 2;
-      const startYOffset = isClosed ? -resolvedConfig.lineSpacing / 2 : -seamWidth / 2;
-
-      placeSeamDiv(seamDivEnd, sEnd, gapHeight, endYOffset, `linear-gradient(to bottom, transparent, ${discBg})`, "-1");
-      placeSeamDiv(seamDivStart, sStart, gapHeight, startYOffset, `linear-gradient(to bottom, ${discBg}, transparent)`, "1");
+      placeSeamDiv(seamDivEnd, sEnd, seamWidth, `linear-gradient(to bottom, transparent, ${discBg})`, "-1");
+      placeSeamDiv(seamDivStart, sStart, seamWidth, `linear-gradient(to bottom, ${discBg}, transparent)`, "1");
     }
 
     function buildLines() {
@@ -444,13 +439,12 @@ function placeSeamDiv(
   el: HTMLDivElement,
   s: { x: number; y: number; angleDeg: number; lineWidth: number },
   height: number,
-  yOffset: number,
   gradient: string,
   zIndex: string,
 ) {
   el.style.width = `${s.lineWidth}px`;
   el.style.height = `${height}px`;
-  el.style.transform = `translate(${s.x}px, ${s.y + yOffset}px) rotate(${s.angleDeg}deg)`;
+  el.style.transform = `translate(${s.x}px, ${s.y - height / 2}px) rotate(${s.angleDeg}deg)`;
   el.style.background = gradient;
   el.style.zIndex = zIndex;
   el.style.display = "";

@@ -20,6 +20,8 @@ export const SHAPE_OPTIONS: Array<{ id: RadialShapeKind; label: string }> = [
 export interface DemoOptions {
   widthRatio: number;
   heightRatio: number;
+  innerWidthRatio: number;
+  innerHeightRatio: number;
   textInset: number;
   cornerRadius: number;
   lineSpacing: number;
@@ -75,6 +77,22 @@ const SLIDER_REGISTRY = {
     label: "height",
     min: 30,
     max: 100,
+    step: 1,
+    display: (value) => `${value}`,
+  },
+  innerWidthRatio: {
+    id: "innerWidthRatio",
+    label: "inner w",
+    min: 10,
+    max: 90,
+    step: 1,
+    display: (value) => `${value}`,
+  },
+  innerHeightRatio: {
+    id: "innerHeightRatio",
+    label: "inner h",
+    min: 10,
+    max: 90,
     step: 1,
     display: (value) => `${value}`,
   },
@@ -225,14 +243,30 @@ export function getDemoSliders(shape: RadialShapeKind): SliderConfig[] {
         ...COMMON_LAYOUT_SLIDERS,
       ];
     case "stadium":
+      return [
+        SLIDER_REGISTRY.widthRatio,
+        SLIDER_REGISTRY.heightRatio,
+        SLIDER_REGISTRY.innerWidthRatio,
+        SLIDER_REGISTRY.innerHeightRatio,
+        SLIDER_REGISTRY.cornerRadius,
+        ...COMMON_LAYOUT_SLIDERS,
+      ];
     case "ellipse":
-      return DEMO_SLIDERS;
+      return [
+        SLIDER_REGISTRY.widthRatio,
+        SLIDER_REGISTRY.heightRatio,
+        SLIDER_REGISTRY.innerWidthRatio,
+        SLIDER_REGISTRY.innerHeightRatio,
+        ...COMMON_LAYOUT_SLIDERS,
+      ];
   }
 }
 
 export const INITIAL_DEMO_OPTIONS: DemoOptions = {
   widthRatio: 90,
   heightRatio: 90,
+  innerWidthRatio: 40,
+  innerHeightRatio: 40,
   textInset: 6,
   cornerRadius: 100,
   lineSpacing: 12,
@@ -322,6 +356,8 @@ export function createRadialGeometry(shape: RadialShapeKind, demoOptions: Partia
         stadium: {
           widthRatio: ratio(demoOptions.widthRatio, defaults.widthRatio),
           heightRatio: ratio(demoOptions.heightRatio, defaults.heightRatio),
+          innerWidthRatio: ratio(demoOptions.innerWidthRatio, defaults.innerWidthRatio),
+          innerHeightRatio: ratio(demoOptions.innerHeightRatio, defaults.innerHeightRatio),
           cornerRadius: ratio(demoOptions.cornerRadius, defaults.cornerRadius),
         },
       };
@@ -330,6 +366,8 @@ export function createRadialGeometry(shape: RadialShapeKind, demoOptions: Partia
         ellipse: {
           widthRatio: ratio(demoOptions.widthRatio, defaults.widthRatio),
           heightRatio: ratio(demoOptions.heightRatio, defaults.heightRatio),
+          innerWidthRatio: ratio(demoOptions.innerWidthRatio, defaults.innerWidthRatio),
+          innerHeightRatio: ratio(demoOptions.innerHeightRatio, defaults.innerHeightRatio),
         },
       };
     case "spiral":
