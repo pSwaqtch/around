@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { useEffect, useImperativeHandle, useMemo, useRef, useState, type CSSProperties, type Ref } from "react";
 
 import {
   buildArticleLines,
@@ -54,6 +54,14 @@ export interface RadialTextTypography {
   headingWeight?: number;
 }
 
+/** Imperative handle exposed to parent components for export. */
+export interface RadialTextHandle {
+  /** The viewport-filling disc element — pass directly to html2canvas. */
+  discEl: HTMLDivElement;
+  /** The component root element — carries the `radialText--guides` class. */
+  rootEl: HTMLDivElement;
+}
+
 export interface RadialTextProps {
   text: string;
   shape?: RadialShapeKind;
@@ -64,6 +72,9 @@ export interface RadialTextProps {
   className?: string;
   showGuides?: boolean;
   seamWidth?: number;
+  discBg?: string;
+  /** Optional ref to receive imperative access to disc and root elements. */
+  ref?: Ref<RadialTextHandle>;
 }
 
 interface ResolvedRadialTextGeometry {
@@ -168,11 +179,30 @@ export function RadialText({
   className,
   showGuides = true,
   seamWidth = 1,
+  discBg = "#f3f4f2",
+  ref,
 }: RadialTextProps) {
+  const rootRef = useRef<HTMLDivElement | null>(null);
   const discRef = useRef<HTMLDivElement | null>(null);
   const guideSvgRef = useRef<SVGSVGElement | null>(null);
   const guidePathRef = useRef<SVGPathElement | null>(null);
   const outerGuidePathRef = useRef<SVGPathElement | null>(null);
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      get discEl() {
+        if (!discRef.current) throw new Error("RadialText disc not mounted");
+        return discRef.current;
+      },
+      get rootEl() {
+        if (!rootRef.current) throw new Error("RadialText root not mounted");
+        return rootRef.current;
+      },
+    }),
+    [],
+  );
+
   const [scrollHeightVh, setScrollHeightVh] = useState(DEFAULT_LAYOUT.minScrollHeightVh);
   const resolvedConfig = useMemo(
     () => resolveRadialTextConfig(geometry, layout, typography),
@@ -237,9 +267,13 @@ export function RadialText({
         ? activeTrack.sampleAt(activeTrack.length - resolvedConfig.lineSpacing)
         : activeTrack.sampleAt(activeTrack.length);
       const sStart = activeTrack.sampleAt(0);
+      const isClosed = activeTrack.closed;
+      const gapHeight = isClosed ? resolvedConfig.lineSpacing / 2 : seamWidth;
+      const endYOffset = isClosed ? 0 : -seamWidth / 2;
+      const startYOffset = isClosed ? -resolvedConfig.lineSpacing / 2 : -seamWidth / 2;
 
-      placeSeamDiv(seamDivEnd, sEnd, seamWidth, "linear-gradient(to bottom, transparent, #171717)", "-1");
-      placeSeamDiv(seamDivStart, sStart, seamWidth, "linear-gradient(to bottom, #171717, transparent)", "1");
+      placeSeamDiv(seamDivEnd, sEnd, gapHeight, endYOffset, `linear-gradient(to bottom, transparent, ${discBg})`, "-1");
+      placeSeamDiv(seamDivStart, sStart, gapHeight, startYOffset, `linear-gradient(to bottom, ${discBg}, transparent)`, "1");
     }
 
     function buildLines() {
@@ -390,10 +424,11 @@ export function RadialText({
     typography,
     resolvedConfig,
     seamWidth,
+    discBg,
   ]);
 
   return (
-    <div className={rootClassName} style={style}>
+    <div className={rootClassName} style={style} ref={rootRef}>
       <div className="radialText__disc" ref={discRef}>
         <svg className="radialText__guides" ref={guideSvgRef} aria-hidden="true">
           <path className="radialText__guidePath radialText__guidePath--outer" ref={outerGuidePathRef} />
@@ -408,13 +443,14 @@ export function RadialText({
 function placeSeamDiv(
   el: HTMLDivElement,
   s: { x: number; y: number; angleDeg: number; lineWidth: number },
-  seamWidth: number,
+  height: number,
+  yOffset: number,
   gradient: string,
   zIndex: string,
 ) {
   el.style.width = `${s.lineWidth}px`;
-  el.style.height = `${seamWidth}px`;
-  el.style.transform = `translate(${s.x}px, ${s.y - seamWidth / 2}px) rotate(${s.angleDeg}deg)`;
+  el.style.height = `${height}px`;
+  el.style.transform = `translate(${s.x}px, ${s.y + yOffset}px) rotate(${s.angleDeg}deg)`;
   el.style.background = gradient;
   el.style.zIndex = zIndex;
   el.style.display = "";

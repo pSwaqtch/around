@@ -1,10 +1,11 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 
 import sampleArticle from "../sample big.txt?raw";
 import {
   RadialText,
   type RadialShapeKind,
   type RadialTextGeometry,
+  type RadialTextHandle,
   type RadialTextLayout,
   type RadialTextTypography,
 } from "./components/RadialText/RadialText.js";
@@ -19,11 +20,14 @@ import {
   type DemoOptions,
   type FontPreset,
 } from "./demo/radial-demo-options.js";
+import { exportDiscAsPng } from "./lib/export-disc.js";
 import type { RadialTextAlign } from "./lib/article-layout.js";
 
 const ALIGNMENTS: RadialTextAlign[] = ["left", "justify", "right"];
 
 export function App() {
+  const radialTextRef = useRef<RadialTextHandle>(null);
+  const [isExporting, setIsExporting] = useState(false);
   const [controlsOpen, setControlsOpen] = useState(true);
   const [shape, setShape] = useState<RadialShapeKind>("stadium");
   const [loop, setLoop] = useState(false);
@@ -57,9 +61,21 @@ export function App() {
     }));
   }
 
+  async function handleExport() {
+    if (isExporting || !radialTextRef.current) return;
+    setIsExporting(true);
+    try {
+      const { discEl, rootEl } = radialTextRef.current;
+      await exportDiscAsPng(discEl, rootEl, `radial-text-${shape}.png`);
+    } finally {
+      setIsExporting(false);
+    }
+  }
+
   return (
     <>
       <RadialText
+        ref={radialTextRef}
         text={sampleArticle}
         shape={shape}
         loop={loop}
@@ -114,6 +130,18 @@ export function App() {
                 onClick={() => setShowGuides((isVisible) => !isVisible)}
               >
                 guides
+              </button>
+            </div>
+
+            <div className="switchRow">
+              <button
+                className="toggleButton"
+                type="button"
+                disabled={isExporting}
+                onClick={handleExport}
+                style={{ gridColumn: "1 / -1" }}
+              >
+                {isExporting ? "exporting…" : "export png"}
               </button>
             </div>
 
