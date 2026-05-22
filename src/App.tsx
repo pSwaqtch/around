@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState } from "react";
 
-import sampleArticle from "../sample big.txt?raw";
+import sampleArticle from "./demo/sample big.txt?raw";
 import {
   RadialText,
   type RadialShapeKind,
