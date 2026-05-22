@@ -8,7 +8,7 @@ import {
   type RadialTextHandle,
   type RadialTextLayout,
   type RadialTextTypography,
-} from "./components/RadialText/RadialText.js";
+} from "./RadialText/RadialText.js";
 import {
   createRadialGeometry,
   createRadialLayout,
@@ -20,9 +20,9 @@ import {
   type DemoOptions,
   type FontPreset,
 } from "./demo/radial-demo-options.js";
-import { exportDiscAsPng } from "./lib/export-disc.js";
-import { exportDiscAsSvg } from "./lib/export-disc-svg.js";
-import type { RadialTextAlign } from "./lib/article-layout.js";
+import { exportDiscAsPng } from "./export/png.js";
+import { exportDiscAsSvg } from "./export/svg.js";
+import type { RadialTextAlign } from "./layout/index.js";
 
 const ALIGNMENTS: RadialTextAlign[] = ["left", "justify", "right"];
 

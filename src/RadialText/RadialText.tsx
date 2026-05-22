@@ -8,8 +8,8 @@ import {
   type ArticleLine,
   type ArticleTypography,
   type RadialTextAlign,
-} from "../../lib/article-layout.js";
-import { createPretextWrapper, fillLine } from "../../lib/pretext-wrap.js";
+} from "../layout/index.js";
+import { createPretextWrapper, fillLine } from "../layout/wrap.js";
 import {
   createBlobTrack,
   createEllipseTrack,
@@ -25,7 +25,7 @@ import {
   type SvgPolylineTrackOptions,
   type TextTrack,
   type WaveTrackOptions,
-} from "../../lib/text-track.js";
+} from "../tracks/index.js";
 
 export type RadialShapeKind = "stadium" | "ellipse" | "spiral" | "wave" | "blob" | "svg-path";
 

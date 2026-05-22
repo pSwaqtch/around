@@ -1,6 +1,6 @@
 import { layoutWithLines, prepareWithSegments } from "@chenglou/pretext";
 
-import type { TextStyle } from "./article-layout.js";
+import type { TextStyle } from "./types.js";
 
 const LINE_HEIGHT_RATIO = 1.12;
 

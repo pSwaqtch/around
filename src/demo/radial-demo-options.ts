@@ -3,8 +3,8 @@ import type {
   RadialTextLayout,
   RadialShapeKind,
   RadialTextTypography,
-} from "../components/RadialText/RadialText.js";
-import type { RadialTextAlign } from "../lib/article-layout.js";
+} from "../RadialText/RadialText.js";
+import type { RadialTextAlign } from "../layout/index.js";
 
 export type FontPreset = "serif" | "sans" | "mono";
 
@@ -169,49 +169,6 @@ const SLIDER_REGISTRY = {
     display: (value) => `${value}`,
   },
 } satisfies Partial<Record<keyof DemoOptions, SliderConfig>>;
-
-export const DEMO_SLIDERS: SliderConfig[] = [
-  {
-    id: "widthRatio",
-    label: "width",
-    min: 30,
-    max: 100,
-    step: 1,
-    display: (value) => `${value}`,
-  },
-  {
-    id: "heightRatio",
-    label: "height",
-    min: 30,
-    max: 100,
-    step: 1,
-    display: (value) => `${value}`,
-  },
-  {
-    id: "textInset",
-    label: "inset",
-    min: 0,
-    max: 24,
-    step: 1,
-    display: (value) => `${value}`,
-  },
-  {
-    id: "cornerRadius",
-    label: "corner",
-    min: 0,
-    max: 100,
-    step: 1,
-    display: (value) => `${value}`,
-  },
-  {
-    id: "lineSpacing",
-    label: "spacing",
-    min: 8,
-    max: 22,
-    step: 1,
-    display: (value) => `${value}`,
-  },
-];
 
 export function getDemoSliders(shape: RadialShapeKind): SliderConfig[] {
   switch (shape) {
