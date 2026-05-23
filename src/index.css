@@ -1,0 +1,223 @@
+:root {
+  --bg: #f2f2f2;
+  --fg: #171717;
+  --line-color: #111;
+  --quote-color: #555;
+  --sep-color: #bbb;
+  --ring-color: rgba(180, 0, 255, 0.4);
+  --panel-bg: rgba(242, 242, 242, 0.92);
+  --panel-border: #ddd;
+  --ctrl-fg: #555;
+  --ctrl-border: #aaa;
+}
+
+[data-theme="dark"] {
+  --bg: #111;
+  --fg: #e8e8e8;
+  --line-color: #ddd;
+  --quote-color: #888;
+  --sep-color: #444;
+  --ring-color: rgba(180, 100, 255, 0.55);
+  --panel-bg: rgba(22, 22, 22, 0.95);
+  --panel-border: #333;
+  --ctrl-fg: #888;
+  --ctrl-border: #555;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  width: 100%;
+  font-family: Georgia, serif;
+}
+
+html {
+  min-height: 100%;
+}
+
+body {
+  color: var(--fg);
+  min-height: var(--scroll-height, 260vh);
+  transition: background 0.2s, color 0.2s;
+}
+
+#disc {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.ring {
+  position: absolute;
+  border: 1px solid var(--ring-color);
+  border-radius: 50%;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  transition: border-color 0.2s;
+}
+
+.line {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform-origin: left center;
+  white-space: nowrap;
+  box-sizing: border-box;
+  padding-left: 0;
+  padding-right: 0;
+  font-size: 9px;
+  line-height: 1;
+  color: var(--line-color);
+  user-select: text;
+  text-align-last: inherit;
+}
+
+.line--heading {
+  letter-spacing: 0.01em;
+}
+
+.line--quote {
+  color: var(--quote-color);
+}
+
+.line--spacer {
+  user-select: none;
+}
+
+.line--separator {
+  color: var(--sep-color);
+  user-select: none;
+  letter-spacing: 0;
+}
+
+#status {
+  position: fixed;
+  left: 18px;
+  top: 18px;
+  z-index: 2;
+  max-width: min(360px, calc(100vw - 36px));
+  color: var(--ctrl-fg);
+  font: 12px/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+#controls {
+  position: fixed;
+  top: 18px;
+  right: 18px;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0;
+}
+
+#controls-header {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+#hamburger,
+#themeToggle {
+  background: none;
+  border: 1px solid var(--ctrl-border);
+  border-radius: 4px;
+  padding: 4px 8px;
+  font: 14px/1 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  color: var(--ctrl-fg);
+  cursor: pointer;
+  transition: border-color 0.2s, color 0.2s;
+}
+
+#controls-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+  margin-top: 6px;
+  padding: 10px 12px;
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-border);
+  border-radius: 6px;
+  backdrop-filter: blur(8px);
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.panel-section {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.panel-divider {
+  width: 100%;
+  border-top: 1px solid var(--panel-border);
+  margin: 2px 0;
+}
+
+.ctrl-btn {
+  background: none;
+  border: 1px solid var(--ctrl-border);
+  border-radius: 4px;
+  padding: 4px 10px;
+  font: 11px/1 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  color: var(--ctrl-fg);
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+
+.ctrl-btn:hover {
+  border-color: var(--fg);
+  color: var(--fg);
+}
+
+.slider-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font: 11px/1 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  color: var(--ctrl-fg);
+}
+
+.slider-label {
+  width: 42px;
+  text-align: right;
+}
+
+.slider-val {
+  width: 22px;
+  text-align: left;
+  font-variant-numeric: tabular-nums;
+}
+
+.slider-row input[type="range"] {
+  width: 80px;
+  accent-color: var(--ctrl-fg);
+  cursor: pointer;
+}
+
+.radio-group {
+  display: flex;
+  gap: 10px;
+  font: 11px/1 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  color: var(--ctrl-fg);
+}
+
+.radio-group label {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  cursor: pointer;
+}
+
+.radio-group input[type="radio"] {
+  accent-color: var(--ctrl-fg);
+  cursor: pointer;
+}
