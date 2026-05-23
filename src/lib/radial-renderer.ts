@@ -20,6 +20,22 @@ export interface AppShapeOptions {
   cornerRadius: number;
 }
 
+export interface TypographyOptions {
+  fontFamily: string;
+  bodySize: number;
+  headingSize: number;
+  bodyWeight: number;
+  headingWeight: number;
+}
+
+export const DEFAULT_TYPOGRAPHY: TypographyOptions = {
+  fontFamily: "Georgia, serif",
+  bodySize: 9,
+  headingSize: 11,
+  bodyWeight: 400,
+  headingWeight: 700,
+};
+
 export interface RadialArticleApp {
   start(): void;
   destroy(): void;
@@ -27,6 +43,8 @@ export interface RadialArticleApp {
   setShape(kind: "stadium" | "ellipse"): void;
   setOptions(opts: Partial<AppShapeOptions>): void;
   setLoop(val: boolean): void;
+  setTypography(opts: TypographyOptions): void;
+  getDiscEl(): HTMLElement;
 }
 
 export function createRadialArticleApp({
@@ -42,6 +60,7 @@ export function createRadialArticleApp({
 }): RadialArticleApp {
   const wrapText = createPretextWrapper();
 
+  let typography: TypographyOptions = { ...DEFAULT_TYPOGRAPHY };
   let articleText = "";
   let articleLines: ArticleLine[] = [];
   let lineElements: HTMLElement[] = [];
@@ -71,12 +90,23 @@ export function createRadialArticleApp({
   }
 
   function buildLines() {
-    const maxWidth = shape.lineWidth - shapeOptions.linePadding * 2;
-    articleLines = buildArticleLines(articleText, { maxWidth, wrapText });
+    const ty = typography;
+    const maxWidth = Math.max(1, shape.lineWidth - shapeOptions.linePadding * 2);
 
-    const sepStyle = { fontSize: 9, weight: 400, family: "Georgia, serif" };
+    const customWrap = (text: string, mw: number, style: import("./article-layout").LineStyle) =>
+      wrapText(text, mw, { ...style, family: ty.fontFamily });
+
+    articleLines = buildArticleLines(articleText, { maxWidth, wrapText: customWrap });
+
+    articleLines = articleLines.map((line) => ({
+      ...line,
+      fontSize: line.kind === "heading" ? ty.headingSize : ty.bodySize,
+      weight: line.kind === "heading" ? ty.headingWeight : ty.bodyWeight,
+    }));
+
+    const sepStyle = { fontSize: ty.bodySize, weight: ty.bodyWeight, family: ty.fontFamily };
     const sepText = fillLine("=", maxWidth, sepStyle);
-    articleLines.push({ kind: "separator", text: sepText, fontSize: 9, weight: 400, italic: false });
+    articleLines.push({ kind: "separator", text: sepText, fontSize: ty.bodySize, weight: ty.bodyWeight, italic: false });
   }
 
   function renderRadial() {
@@ -132,6 +162,7 @@ export function createRadialArticleApp({
         el.style.width = (line.lineWidth ?? shape.lineWidth) + "px";
         el.style.fontSize = line.fontSize + "px";
         el.style.fontWeight = String(line.weight);
+        el.style.fontFamily = typography.fontFamily;
         el.style.fontStyle = line.italic ? "italic" : "normal";
         el.style.paddingLeft = shapeOptions.linePadding + "px";
         el.style.paddingRight = shapeOptions.linePadding + "px";
@@ -217,7 +248,16 @@ export function createRadialArticleApp({
     updateConveyorBelt();
   }
 
-  return { start, destroy, loadText, setShape, setOptions, setLoop };
+  function setTypography(opts: TypographyOptions) {
+    typography = opts;
+    rebuild();
+  }
+
+  function getDiscEl(): HTMLElement {
+    return disc;
+  }
+
+  return { start, destroy, loadText, setShape, setOptions, setLoop, setTypography, getDiscEl };
 }
 
 function lineTransform(line: { x: number; y: number; angleDeg: number; fontSize: number }): string {

@@ -1,20 +1,33 @@
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, forwardRef, useImperativeHandle } from "react";
 import { createRadialArticleApp } from "../lib/radial-renderer";
-import type { AppShapeOptions, RadialArticleApp } from "../lib/radial-renderer";
+import type { AppShapeOptions, RadialArticleApp, TypographyOptions } from "../lib/radial-renderer";
 
 interface Props {
   shapeOptions: AppShapeOptions;
   activeShape: "stadium" | "ellipse";
   loop: boolean;
   articleText: string;
+  typography: TypographyOptions;
+  showGuides: boolean;
 }
 
-export function RadialDisc({ shapeOptions, activeShape, loop, articleText }: Props) {
+export interface RadialDiscHandle {
+  discEl: HTMLDivElement;
+}
+
+export const RadialDisc = forwardRef<RadialDiscHandle, Props>(function RadialDisc(
+  { shapeOptions, activeShape, loop, articleText, typography, showGuides },
+  ref,
+) {
   const discRef = useRef<HTMLDivElement>(null);
   const outerRingRef = useRef<HTMLDivElement>(null);
   const innerRingRef = useRef<HTMLDivElement>(null);
   const statusRef = useRef<HTMLDivElement>(null);
   const appRef = useRef<RadialArticleApp | null>(null);
+
+  useImperativeHandle(ref, () => ({
+    get discEl() { return discRef.current!; },
+  }), []);
 
   useEffect(() => {
     const app = createRadialArticleApp({
@@ -28,29 +41,29 @@ export function RadialDisc({ shapeOptions, activeShape, loop, articleText }: Pro
     return () => app.destroy();
   }, []);
 
-  useEffect(() => {
-    appRef.current?.loadText(articleText);
-  }, [articleText]);
-
-  useEffect(() => {
-    appRef.current?.setShape(activeShape);
-  }, [activeShape]);
-
-  useEffect(() => {
-    appRef.current?.setOptions(shapeOptions);
-  }, [shapeOptions]);
-
-  useEffect(() => {
-    appRef.current?.setLoop(loop);
-  }, [loop]);
+  useEffect(() => { appRef.current?.loadText(articleText); }, [articleText]);
+  useEffect(() => { appRef.current?.setShape(activeShape); }, [activeShape]);
+  useEffect(() => { appRef.current?.setOptions(shapeOptions); }, [shapeOptions]);
+  useEffect(() => { appRef.current?.setLoop(loop); }, [loop]);
+  useEffect(() => { appRef.current?.setTypography(typography); }, [typography]);
 
   return (
     <>
       <div id="disc" ref={discRef}>
-        <div className="ring" id="outerRing" ref={outerRingRef} />
-        <div className="ring" id="innerRing" ref={innerRingRef} />
+        <div
+          className="ring"
+          id="outerRing"
+          ref={outerRingRef}
+          style={{ visibility: showGuides ? "visible" : "hidden" }}
+        />
+        <div
+          className="ring"
+          id="innerRing"
+          ref={innerRingRef}
+          style={{ visibility: showGuides ? "visible" : "hidden" }}
+        />
       </div>
       <div id="status" ref={statusRef}>Loading…</div>
     </>
   );
-}
+});
