@@ -4,7 +4,7 @@ import type { AppShapeOptions, RadialArticleApp, TypographyOptions } from "../li
 
 interface Props {
   shapeOptions: AppShapeOptions;
-  activeShape: "stadium" | "ellipse";
+  activeShape: "stadium" | "ellipse" | "wave";
   loop: boolean;
   articleText: string;
   typography: TypographyOptions;

@@ -368,6 +368,76 @@ export function createEllipseShape(
   };
 }
 
+export interface WaveShapeOptions {
+  scale?: number;
+  innerRatio?: number;
+  waveAmplitude?: number; // fraction of track width, 0–0.9
+  waveCycles?: number;    // integer number of full sine cycles around the ring
+}
+
+// Wave shape: outer boundary is a circle; inner boundary is a sine wave on a circle.
+// Each line slot gets a lineWidth = outerR − r_inner(θ), so slots alternate between
+// wide (trough, inner boundary close to centre) and narrow (crest, inner boundary
+// close to outer ring). Text is wrapped once to the minimum width so it always fits,
+// and each slot's CSS width is set to its actual (per-point) lineWidth.
+export function createWaveShape(
+  viewportWidth: number,
+  viewportHeight: number,
+  { scale = 1, innerRatio = INNER_RADIUS_RATIO, waveAmplitude = 0.35, waveCycles = 4 }: WaveShapeOptions = {},
+): TrackShape {
+  const outerR = Math.max(1, Math.floor(Math.min(viewportWidth, viewportHeight) / 2 * scale) - DISC_MARGIN);
+  const trackWidth = Math.max(1, Math.round(outerR * (1 - innerRatio)));
+  const midInnerR = outerR - trackWidth;
+  const cycles = Math.max(1, Math.round(waveCycles));
+  const amplitudePx = Math.round(trackWidth * Math.min(Math.abs(waveAmplitude), 0.9));
+
+  // Inner radius at normalised position t ∈ [0, 1)
+  function rInner(nt: number): number {
+    return midInnerR + amplitudePx * Math.sin(cycles * 2 * Math.PI * nt);
+  }
+
+  function point(t: number): { x: number; y: number; angleDeg: number; lineWidth: number } {
+    const nt = ((t % 1) + 1) % 1;
+    // Angle starts at top (−π/2) and advances clockwise, matching stadium/ellipse convention
+    const angle = nt * 2 * Math.PI - Math.PI / 2;
+    const ri = rInner(nt);
+    return {
+      x: ri * Math.cos(angle),
+      y: ri * Math.sin(angle),
+      // Outward direction is radial for a circular outer boundary
+      angleDeg: angle * (180 / Math.PI),
+      lineWidth: Math.max(1, outerR - ri),
+    };
+  }
+
+  // Perimeter of the wavy inner path (numerical integration)
+  const SAMPLES = 720;
+  let perimeter = 0;
+  let prev = point(0);
+  for (let i = 1; i <= SAMPLES; i++) {
+    const p = point(i / SAMPLES);
+    const dx = p.x - prev.x;
+    const dy = p.y - prev.y;
+    perimeter += Math.sqrt(dx * dx + dy * dy);
+    prev = p;
+  }
+
+  return {
+    point,
+    perimeter,
+    // Minimum line width (crest of wave) — used by buildLines for text wrapping
+    lineWidth: trackWidth - amplitudePx,
+    outerWidth: outerR * 2,
+    outerHeight: outerR * 2,
+    outerBorderRadius: "50%",
+    // Inner guide ring sits at the mean inner radius — visually independent from
+    // the outer circle, and the wave oscillates around it
+    innerWidth: midInnerR * 2,
+    innerHeight: midInnerR * 2,
+    innerBorderRadius: "50%",
+  };
+}
+
 function ellipseRayDist(px: number, py: number, nx: number, ny: number, a: number, b: number): number {
   const A = (nx * nx) / (a * a) + (ny * ny) / (b * b);
   const B = 2 * ((px * nx) / (a * a) + (py * ny) / (b * b));

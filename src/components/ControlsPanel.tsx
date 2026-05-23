@@ -5,14 +5,14 @@ import type { FontPresetId } from "../App";
 
 interface Props {
   shapeOptions: AppShapeOptions;
-  activeShape: "stadium" | "ellipse";
+  activeShape: "stadium" | "ellipse" | "wave";
   loop: boolean;
   theme: "light" | "dark";
   showGuides: boolean;
   fontPresetId: FontPresetId;
   isExporting: boolean;
   onShapeOptionChange: (key: keyof AppShapeOptions, value: number | string) => void;
-  onShapeChange: (shape: "stadium" | "ellipse") => void;
+  onShapeChange: (shape: "stadium" | "ellipse" | "wave") => void;
   onLoopChange: (val: boolean) => void;
   onThemeChange: () => void;
   onShowGuidesChange: (val: boolean) => void;
@@ -22,9 +22,10 @@ interface Props {
   onExportSvg: () => void;
 }
 
-const SHAPES: Array<{ id: "stadium" | "ellipse"; label: string }> = [
+const SHAPES: Array<{ id: "stadium" | "ellipse" | "wave"; label: string }> = [
   { id: "stadium", label: "stadium" },
   { id: "ellipse", label: "ellipse" },
+  { id: "wave", label: "wave" },
 ];
 
 const ALIGNMENTS: Array<AppShapeOptions["align"]> = ["left", "justify", "right"];
@@ -171,22 +172,40 @@ export function ControlsPanel({
             />
           </div>
 
-          {/* Sliders */}
-          <SliderRow label="width" min={0} max={100}
-            value={Math.round(shapeOptions.shapeX * 100)}
-            onChange={(v) => onShapeOptionChange("shapeX", v / 100)}
-          />
-          <SliderRow label="height" min={0} max={100}
-            value={Math.round(shapeOptions.shapeY * 100)}
-            onChange={(v) => onShapeOptionChange("shapeY", v / 100)}
-          />
+          {/* Shape-specific sliders */}
+          {activeShape === "stadium" && (
+            <>
+              <SliderRow label="width" min={0} max={100}
+                value={Math.round(shapeOptions.shapeX * 100)}
+                onChange={(v) => onShapeOptionChange("shapeX", v / 100)}
+              />
+              <SliderRow label="height" min={0} max={100}
+                value={Math.round(shapeOptions.shapeY * 100)}
+                onChange={(v) => onShapeOptionChange("shapeY", v / 100)}
+              />
+              <SliderRow label="corner" min={0} max={100}
+                value={Math.round(shapeOptions.cornerRadius * 100)}
+                onChange={(v) => onShapeOptionChange("cornerRadius", v / 100)}
+              />
+            </>
+          )}
+          {activeShape === "wave" && (
+            <>
+              <SliderRow label="amplitude" min={0} max={85}
+                value={Math.round(shapeOptions.waveAmplitude * 100)}
+                onChange={(v) => onShapeOptionChange("waveAmplitude", v / 100)}
+              />
+              <SliderRow label="cycles" min={1} max={12}
+                value={shapeOptions.waveCycles}
+                onChange={(v) => onShapeOptionChange("waveCycles", v)}
+              />
+            </>
+          )}
+
+          {/* Common sliders */}
           <SliderRow label="inner" min={15} max={80}
             value={Math.round(shapeOptions.innerRatio * 100)}
             onChange={(v) => onShapeOptionChange("innerRatio", v / 100)}
-          />
-          <SliderRow label="corner" min={0} max={100}
-            value={Math.round(shapeOptions.cornerRadius * 100)}
-            onChange={(v) => onShapeOptionChange("cornerRadius", v / 100)}
           />
           <SliderRow label="scale" min={30} max={100}
             value={Math.round(shapeOptions.scale * 100)}

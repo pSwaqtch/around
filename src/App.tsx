@@ -14,6 +14,8 @@ const DEFAULT_SHAPE_OPTIONS: AppShapeOptions = {
   shapeX: 0.3,
   shapeY: 0,
   cornerRadius: 1,
+  waveAmplitude: 0.35,
+  waveCycles: 4,
 };
 
 const DEFAULT_ARTICLE_URL = "sample big.txt";
@@ -65,7 +67,7 @@ export const FONT_PRESETS: FontPreset[] = [
 export default function App() {
   const discRef = useRef<RadialDiscHandle>(null);
   const [shapeOptions, setShapeOptions] = useState<AppShapeOptions>(DEFAULT_SHAPE_OPTIONS);
-  const [activeShape, setActiveShape] = useState<"stadium" | "ellipse">("stadium");
+  const [activeShape, setActiveShape] = useState<"stadium" | "ellipse" | "wave">("stadium");
   const [loop, setLoop] = useState(false);
   const [theme, setTheme] = useState<"light" | "dark">("light");
   const [showGuides, setShowGuides] = useState(true);
@@ -138,7 +140,7 @@ export default function App() {
         fontPresetId={fontPresetId}
         isExporting={isExporting}
         onShapeOptionChange={handleShapeOptionChange}
-        onShapeChange={setActiveShape}
+        onShapeChange={(s) => setActiveShape(s)}
         onLoopChange={setLoop}
         onThemeChange={handleThemeChange}
         onShowGuidesChange={setShowGuides}

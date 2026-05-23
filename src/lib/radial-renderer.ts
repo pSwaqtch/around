@@ -2,6 +2,7 @@ import {
   buildArticleLines,
   createEllipseShape,
   createStadiumShape,
+  createWaveShape,
   layoutShapeLines,
   type ArticleLine,
   type TrackShape,
@@ -15,9 +16,13 @@ export interface AppShapeOptions {
   innerRatio: number;
   align: "left" | "justify" | "right";
   linePadding: number;
+  // stadium
   shapeX: number;
   shapeY: number;
   cornerRadius: number;
+  // wave
+  waveAmplitude: number;
+  waveCycles: number;
 }
 
 export interface TypographyOptions {
@@ -43,6 +48,7 @@ export interface RadialArticleApp {
   setShape(kind: "stadium" | "ellipse"): void;
   setOptions(opts: Partial<AppShapeOptions>): void;
   setLoop(val: boolean): void;
+  setShape(kind: "stadium" | "ellipse" | "wave"): void;
   setTypography(opts: TypographyOptions): void;
   getDiscEl(): HTMLElement;
 }
@@ -67,11 +73,16 @@ export function createRadialArticleApp({
   let prevLineIndices: number[] = [];
   let loopContent = false;
   const shapeFactories = {
-    stadium: createStadiumShape,
-    ellipse: createEllipseShape,
+    stadium: (w: number, h: number, o: AppShapeOptions) => createStadiumShape(w, h, o),
+    ellipse: (w: number, h: number, o: AppShapeOptions) => createEllipseShape(w, h, o),
+    wave:    (w: number, h: number, o: AppShapeOptions) => createWaveShape(w, h, o),
   };
-  let activeShapeKind: "stadium" | "ellipse" = "stadium";
-  let shapeOptions: AppShapeOptions = { scale: 1, innerRatio: 0.44, align: "left", linePadding: 6, shapeX: 0.3, shapeY: 0, cornerRadius: 1 };
+  let activeShapeKind: "stadium" | "ellipse" | "wave" = "stadium";
+  let shapeOptions: AppShapeOptions = {
+    scale: 1, innerRatio: 0.44, align: "left", linePadding: 6,
+    shapeX: 0.3, shapeY: 0, cornerRadius: 1,
+    waveAmplitude: 0.35, waveCycles: 4,
+  };
   let shape: TrackShape = createStadiumShape(window.innerWidth, window.innerHeight, shapeOptions);
   let latestScrollY = 0;
   let ticking = false;
@@ -231,7 +242,7 @@ export function createRadialArticleApp({
     }
   }
 
-  function setShape(kind: "stadium" | "ellipse") {
+  function setShape(kind: "stadium" | "ellipse" | "wave") {
     if (!shapeFactories[kind] || kind === activeShapeKind) return;
     activeShapeKind = kind;
     rebuild();
