@@ -1,47 +1,68 @@
 :root {
-  --bg: #f2f2f2;
-  --fg: #171717;
+  --bg: #f3f4f2;
+  --fg: #171917;
+  --surface: rgba(247, 248, 246, 0.9);
+  --surface-border: rgba(38, 45, 40, 0.16);
+  --surface-highlight: rgba(255, 255, 255, 0.72);
+  --control-bg: rgba(227, 230, 225, 0.72);
+  --control-text: #59615a;
+  --control-divider: rgba(38, 45, 40, 0.12);
+  --active-bg: #2f3a33;
+  --active-text: #f8faf7;
+  --accent: #3f5549;
+  --ring-color: rgba(180, 0, 255, 0.4);
   --line-color: #111;
   --quote-color: #555;
   --sep-color: #bbb;
-  --ring-color: rgba(180, 0, 255, 0.4);
-  --panel-bg: rgba(242, 242, 242, 0.92);
-  --panel-border: #ddd;
-  --ctrl-fg: #555;
-  --ctrl-border: #aaa;
 }
 
 [data-theme="dark"] {
-  --bg: #111;
-  --fg: #e8e8e8;
+  --bg: #1c1c1e;
+  --fg: #e5e5ea;
+  --surface: rgba(36, 36, 40, 0.94);
+  --surface-border: rgba(255, 255, 255, 0.1);
+  --surface-highlight: rgba(255, 255, 255, 0.06);
+  --control-bg: rgba(50, 50, 54, 0.8);
+  --control-text: #98989f;
+  --control-divider: rgba(255, 255, 255, 0.08);
+  --active-bg: #e5e5ea;
+  --active-text: #1c1c1e;
+  --accent: #a0a0c8;
+  --ring-color: rgba(180, 100, 255, 0.55);
   --line-color: #ddd;
   --quote-color: #888;
-  --sep-color: #444;
-  --ring-color: rgba(180, 100, 255, 0.55);
-  --panel-bg: rgba(22, 22, 22, 0.95);
-  --panel-border: #333;
-  --ctrl-fg: #888;
-  --ctrl-border: #555;
-}
-
-html,
-body {
-  margin: 0;
-  padding: 0;
-  background: var(--bg);
-  width: 100%;
-  font-family: Georgia, serif;
+  --sep-color: #3a3a3a;
 }
 
 html {
   min-height: 100%;
 }
 
+html,
 body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  background: var(--bg);
   color: var(--fg);
-  min-height: var(--scroll-height, 260vh);
+  font-family: Georgia, serif;
   transition: background 0.2s, color 0.2s;
 }
+
+body {
+  min-height: var(--scroll-height, 260vh);
+}
+
+button,
+input {
+  font: inherit;
+}
+
+button {
+  color: inherit;
+}
+
+/* ─── Disc & rings ─────────────────────────────────────── */
 
 #disc {
   position: fixed;
@@ -62,6 +83,8 @@ body {
   transition: border-color 0.2s;
 }
 
+/* ─── Text lines ───────────────────────────────────────── */
+
 .line {
   position: absolute;
   left: 50%;
@@ -69,8 +92,6 @@ body {
   transform-origin: left center;
   white-space: nowrap;
   box-sizing: border-box;
-  padding-left: 0;
-  padding-right: 0;
   font-size: 9px;
   line-height: 1;
   color: var(--line-color);
@@ -96,128 +117,220 @@ body {
   letter-spacing: 0;
 }
 
+/* ─── Status ───────────────────────────────────────────── */
+
 #status {
   position: fixed;
   left: 18px;
   top: 18px;
   z-index: 2;
   max-width: min(360px, calc(100vw - 36px));
-  color: var(--ctrl-fg);
+  color: var(--control-text);
   font: 12px/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 }
 
-#controls {
+/* ─── Control dock ─────────────────────────────────────── */
+
+.controlDock {
   position: fixed;
   top: 18px;
   right: 18px;
   z-index: 2;
   display: flex;
+  width: min(336px, calc(100vw - 36px));
   flex-direction: column;
   align-items: flex-end;
-  gap: 0;
+  gap: 8px;
+  color: #303630;
+  font-family:
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
 }
 
-#controls-header {
-  display: flex;
-  gap: 6px;
-  align-items: center;
-}
-
-#hamburger,
-#themeToggle {
-  background: none;
-  border: 1px solid var(--ctrl-border);
-  border-radius: 4px;
-  padding: 4px 8px;
-  font: 14px/1 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  color: var(--ctrl-fg);
-  cursor: pointer;
-  transition: border-color 0.2s, color 0.2s;
-}
-
-#controls-panel {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 6px;
-  margin-top: 6px;
-  padding: 10px 12px;
-  background: var(--panel-bg);
-  border: 1px solid var(--panel-border);
-  border-radius: 6px;
-  backdrop-filter: blur(8px);
-  transition: background 0.2s, border-color 0.2s;
-}
-
-.panel-section {
-  display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-}
-
-.panel-divider {
-  width: 100%;
-  border-top: 1px solid var(--panel-border);
-  margin: 2px 0;
-}
-
-.ctrl-btn {
-  background: none;
-  border: 1px solid var(--ctrl-border);
-  border-radius: 4px;
-  padding: 4px 10px;
-  font: 11px/1 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  color: var(--ctrl-fg);
-  cursor: pointer;
-  transition: border-color 0.15s, color 0.15s;
-}
-
-.ctrl-btn:hover {
-  border-color: var(--fg);
+[data-theme="dark"] .controlDock {
   color: var(--fg);
 }
 
-.slider-row {
-  display: flex;
+.dockToggle {
+  min-width: 56px;
+  border: 1px solid var(--surface-border);
+  border-radius: 6px;
+  padding: 7px 10px;
+  background: var(--surface);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+  cursor: pointer;
+  font: 600 12px/1 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  transition:
+    transform 160ms ease,
+    border-color 160ms ease,
+    background 160ms ease;
+}
+
+[data-theme="dark"] .dockToggle {
+  box-shadow: none;
+}
+
+.dockToggle:hover {
+  border-color: var(--surface-border);
+  background: var(--surface-highlight);
+}
+
+.dockToggle:active {
+  transform: translateY(1px) scale(0.98);
+}
+
+/* ─── Control panel ────────────────────────────────────── */
+
+.controlPanel {
+  display: grid;
+  width: 100%;
+  gap: 10px;
+  border: 1px solid var(--surface-border);
+  border-radius: 8px;
+  padding: 12px;
+  background: var(--surface);
+  box-shadow:
+    0 16px 42px rgba(30, 36, 32, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(12px);
+  transition: background 0.2s, border-color 0.2s;
+}
+
+[data-theme="dark"] .controlPanel {
+  box-shadow:
+    0 16px 42px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.controlRow,
+.switchRow,
+.sliderRow {
+  display: grid;
   align-items: center;
   gap: 8px;
-  font: 11px/1 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  color: var(--ctrl-fg);
 }
 
-.slider-label {
-  width: 42px;
-  text-align: right;
+.controlRow {
+  grid-template-columns: 56px minmax(0, 1fr);
 }
 
-.slider-val {
-  width: 22px;
-  text-align: left;
-  font-variant-numeric: tabular-nums;
+.switchRow {
+  grid-template-columns: 1fr 1fr 1fr;
 }
 
-.slider-row input[type="range"] {
-  width: 80px;
-  accent-color: var(--ctrl-fg);
+.sliderRow {
+  grid-template-columns: 56px minmax(104px, 1fr) 34px;
+  font: 500 11px/1 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+.controlLabel {
+  color: var(--control-text);
+  font: 500 11px/1 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+/* ─── Segmented controls ───────────────────────────────── */
+
+.segmentedControl {
+  display: grid;
+  grid-auto-columns: 1fr;
+  grid-auto-flow: column;
+  overflow: hidden;
+  border: 1px solid var(--surface-border);
+  border-radius: 6px;
+  background: var(--control-bg);
+}
+
+.segmentButton,
+.toggleButton {
+  border: 0;
+  border-radius: 0;
+  padding: 7px 8px;
+  background: transparent;
+  cursor: pointer;
+  font: 600 11px/1 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  transition:
+    background 160ms ease,
+    color 160ms ease,
+    transform 160ms ease;
+}
+
+.segmentButton + .segmentButton {
+  border-left: 1px solid var(--control-divider);
+}
+
+.toggleButton {
+  border: 1px solid var(--surface-border);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.42);
+}
+
+[data-theme="dark"] .toggleButton {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.segmentButton:hover,
+.toggleButton:hover {
+  background: var(--surface-highlight);
+}
+
+.segmentButton:active,
+.toggleButton:active {
+  transform: translateY(1px) scale(0.98);
+}
+
+.segmentButton.isActive,
+.toggleButton.isActive {
+  background: var(--active-bg);
+  color: var(--active-text);
+}
+
+/* ─── Sliders ──────────────────────────────────────────── */
+
+.sliderRow span,
+.sliderRow output {
+  color: var(--control-text);
+}
+
+.sliderRow input[type="range"] {
+  width: 100%;
+  accent-color: var(--accent);
   cursor: pointer;
 }
 
-.radio-group {
+/* ─── File input row ───────────────────────────────────── */
+
+.fileRow {
   display: flex;
-  gap: 10px;
-  font: 11px/1 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  color: var(--ctrl-fg);
+  gap: 8px;
 }
 
-.radio-group label {
-  display: flex;
-  align-items: center;
-  gap: 3px;
-  cursor: pointer;
+.fileRow .toggleButton {
+  flex: 1;
 }
 
-.radio-group input[type="radio"] {
-  accent-color: var(--ctrl-fg);
-  cursor: pointer;
+/* ─── Responsive ───────────────────────────────────────── */
+
+@media (max-width: 640px) {
+  .controlDock {
+    top: 12px;
+    right: 12px;
+    width: min(312px, calc(100vw - 24px));
+  }
+
+  .controlPanel {
+    padding: 10px;
+  }
+
+  .controlRow,
+  .sliderRow {
+    grid-template-columns: 48px minmax(0, 1fr) 30px;
+  }
+
+  .controlRow {
+    grid-template-columns: 48px minmax(0, 1fr);
+  }
 }
