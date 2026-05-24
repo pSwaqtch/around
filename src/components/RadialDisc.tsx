@@ -46,22 +46,13 @@ export const RadialDisc = forwardRef<RadialDiscHandle, Props>(function RadialDis
   useEffect(() => { appRef.current?.setOptions(shapeOptions); }, [shapeOptions]);
   useEffect(() => { appRef.current?.setLoop(loop); }, [loop]);
   useEffect(() => { appRef.current?.setTypography(typography); }, [typography]);
+  useEffect(() => { appRef.current?.setGuidesVisible(showGuides); }, [showGuides]);
 
   return (
     <>
       <div id="disc" ref={discRef}>
-        <div
-          className="ring"
-          id="outerRing"
-          ref={outerRingRef}
-          style={{ visibility: showGuides ? "visible" : "hidden" }}
-        />
-        <div
-          className="ring"
-          id="innerRing"
-          ref={innerRingRef}
-          style={{ visibility: showGuides ? "visible" : "hidden" }}
-        />
+        <div className="ring" id="outerRing" ref={outerRingRef} />
+        <div className="ring" id="innerRing" ref={innerRingRef} />
       </div>
       <div id="status" ref={statusRef}>Loading…</div>
     </>

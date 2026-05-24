@@ -33,6 +33,8 @@ export interface TrackShape {
   innerWidth: number;
   innerHeight: number;
   innerBorderRadius: string;
+  /** Returns an SVG path string tracing the inner guide boundary (wave shapes only). */
+  innerGuidePath?(cx: number, cy: number): string;
 }
 
 export interface StadiumShapeOptions {
@@ -171,6 +173,29 @@ export function parseArticle(source: string): Block[] {
   flushParagraph();
 
   return blocks;
+}
+
+export interface ParsedArticleBlock {
+  kind: BlockKind | "spacer";
+  text: string;
+  style: LineStyle;
+}
+
+/** Returns article blocks with prefixes/spacers applied, ready for per-slot wrapping. */
+export function getArticleBlocks(source: string): ParsedArticleBlock[] {
+  const blocks = parseArticle(source);
+  const result: ParsedArticleBlock[] = [];
+
+  blocks.forEach((block, index) => {
+    if (index > 0 && shouldInsertSpacer(blocks[index - 1], block)) {
+      result.push({ kind: "spacer", text: "", style: BODY_STYLE });
+    }
+    const prefix = block.kind === "list-item" ? "- " : block.kind === "quote" ? '"' : "";
+    const suffix = block.kind === "quote" ? '"' : "";
+    result.push({ kind: block.kind, text: `${prefix}${block.text}${suffix}`, style: getStyle(block.kind) });
+  });
+
+  return result;
 }
 
 export function buildArticleLines(
@@ -422,19 +447,32 @@ export function createWaveShape(
     prev = p;
   }
 
+  function innerGuidePath(cx: number, cy: number): string {
+    const N = 360;
+    const parts: string[] = [];
+    for (let i = 0; i <= N; i++) {
+      const nt = i / N;
+      const angle = nt * 2 * Math.PI - Math.PI / 2;
+      const ri = rInner(nt);
+      const x = (cx + ri * Math.cos(angle)).toFixed(2);
+      const y = (cy + ri * Math.sin(angle)).toFixed(2);
+      parts.push(`${i === 0 ? "M" : "L"}${x},${y}`);
+    }
+    parts.push("Z");
+    return parts.join(" ");
+  }
+
   return {
     point,
     perimeter,
-    // Minimum line width (crest of wave) — used by buildLines for text wrapping
     lineWidth: trackWidth - amplitudePx,
     outerWidth: outerR * 2,
     outerHeight: outerR * 2,
     outerBorderRadius: "50%",
-    // Inner guide ring sits at the mean inner radius — visually independent from
-    // the outer circle, and the wave oscillates around it
     innerWidth: midInnerR * 2,
     innerHeight: midInnerR * 2,
     innerBorderRadius: "50%",
+    innerGuidePath,
   };
 }
 
