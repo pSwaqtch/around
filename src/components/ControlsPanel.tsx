@@ -211,6 +211,10 @@ export function ControlsPanel({
             value={Math.round(shapeOptions.scale * 100)}
             onChange={(v) => onShapeOptionChange("scale", v / 100)}
           />
+          <SliderRow label="spacing" min={9} max={24}
+            value={shapeOptions.lineSpacing}
+            onChange={(v) => onShapeOptionChange("lineSpacing", v)}
+          />
           <SliderRow label="inset" min={0} max={20}
             value={shapeOptions.linePadding}
             onChange={(v) => onShapeOptionChange("linePadding", v)}

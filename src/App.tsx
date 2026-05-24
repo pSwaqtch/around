@@ -11,6 +11,7 @@ const DEFAULT_SHAPE_OPTIONS: AppShapeOptions = {
   innerRatio: 0.44,
   align: "left",
   linePadding: 6,
+  lineSpacing: 13,
   shapeX: 0.3,
   shapeY: 0,
   cornerRadius: 1,

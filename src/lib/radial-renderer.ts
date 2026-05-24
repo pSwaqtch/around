@@ -8,13 +8,13 @@ import {
 } from "./article-layout";
 import { createPretextWrapper, fillLine } from "./pretext-wrap";
 
-const MIN_LINE_SPACING = 12;
 
 export interface AppShapeOptions {
   scale: number;
   innerRatio: number;
   align: "left" | "justify" | "right";
   linePadding: number;
+  lineSpacing: number;
   // stadium
   shapeX: number;
   shapeY: number;
@@ -87,7 +87,7 @@ export function createRadialArticleApp({
   };
   let activeShapeKind: "stadium" | "ellipse" | "wave" = "stadium";
   let shapeOptions: AppShapeOptions = {
-    scale: 1, innerRatio: 0.44, align: "left", linePadding: 6,
+    scale: 1, innerRatio: 0.44, align: "left", linePadding: 6, lineSpacing: 13,
     shapeX: 0.3, shapeY: 0, cornerRadius: 1,
     waveAmplitude: 0.35, waveCycles: 4,
   };
@@ -163,7 +163,7 @@ export function createRadialArticleApp({
   }
 
   function renderRadial() {
-    const numSlots = Math.ceil(shape.perimeter / MIN_LINE_SPACING) + 1;
+    const numSlots = Math.ceil(shape.perimeter / shapeOptions.lineSpacing) + 1;
     disc.querySelectorAll(".line").forEach((el) => el.remove());
     lineElements = [];
 
@@ -210,7 +210,7 @@ export function createRadialArticleApp({
     }
 
     // Sub-slot fractional offset for smooth scrolling
-    const step = MIN_LINE_SPACING / shape.perimeter;
+    const step = shapeOptions.lineSpacing / shape.perimeter;
     const slotsFromStart = startT / step;
     const frac = slotsFromStart - Math.floor(slotsFromStart);
 
@@ -220,12 +220,14 @@ export function createRadialArticleApp({
     for (let i = 0; i < lineElements.length; i++) {
       const el = lineElements[i];
 
-      // Angular position on shape with fractional smoothing
-      const t = (((i - frac) * step) % 1 + 1) % 1;
-      if (!loopContent && i * step + (1 - frac) * step > 1) {
+      // rawT is the normalized angular position; mirrors the layoutShapeLines convention.
+      // Negative rawT or rawT >= 1 means the slot is outside the visible arc this frame.
+      const rawT = (i - frac) * step;
+      if (rawT < 0 || rawT >= 1) {
         el.style.visibility = "hidden";
         continue;
       }
+      const t = loopContent ? ((rawT % 1) + 1) % 1 : rawT;
 
       if (curBIdx >= contentBlocks.length) {
         if (loopContent) { curBIdx = 0; curBOff = 0; }
