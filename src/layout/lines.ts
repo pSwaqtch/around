@@ -93,4 +93,29 @@ function createSpacerLine(typography?: ArticleTypography): ArticleLine {
   };
 }
 
+/** Returns article content as unwrapped blocks, ready for per-slot wrapping. */
+export function getArticleBlocks(source: string, typography?: ArticleTypography): ArticleLine[] {
+  const blocks = parseArticle(source);
+  const result: ArticleLine[] = [];
+
+  blocks.forEach((block, index) => {
+    if (index > 0 && blocks[index - 1] && shouldInsertSpacer(blocks[index - 1], block)) {
+      result.push(createSpacerLine(typography));
+    }
+    const style = getStyle(block.kind, typography);
+    const prefix = block.kind === "list-item" ? "- " : block.kind === "quote" ? '"' : "";
+    const suffix = block.kind === "quote" ? '"' : "";
+    result.push({
+      kind: block.kind,
+      text: `${prefix}${block.text}${suffix}`,
+      fontSize: style.fontSize,
+      weight: style.weight,
+      family: style.family,
+      italic: Boolean(style.italic),
+    });
+  });
+
+  return result;
+}
+
 export { fillLine };

@@ -2,8 +2,8 @@ import { useEffect, useImperativeHandle, useMemo, useRef, useState, type CSSProp
 import "./RadialText.css";
 
 import {
-  buildArticleLines,
   calculateScrollStartT,
+  getArticleBlocks,
   getStyle,
   type ArticleLine,
   type ArticleTypography,
@@ -236,9 +236,9 @@ export function RadialText({
     const outerGuidePathElement = outerGuidePath;
 const wrapText = createPretextWrapper();
     let disposed = false;
-    let articleLines: ArticleLine[] = [];
+    let contentBlocks: ArticleLine[] = [];
+    let totalContentLength = 0;
     let lineElements: HTMLDivElement[] = [];
-    let prevLineIndices: Array<number | undefined> = [];
     let activeTrack = createTrack(shape, resolvedConfig);
     let latestScrollY = window.scrollY;
     let tickFrame = 0;
@@ -261,27 +261,18 @@ const wrapText = createPretextWrapper();
     }
 
     function buildLines() {
-      const maxWidth = Math.max(1, activeTrack.lineWidth - resolvedConfig.textInset * 2);
-      const separatorStyle = getStyle("separator", resolvedConfig.typography);
-      const separatorText = fillLine("=", maxWidth, separatorStyle);
+      const sepStyle = getStyle("separator", resolvedConfig.typography);
+      contentBlocks = getArticleBlocks(text, resolvedConfig.typography);
+      contentBlocks.push({ kind: "separator", text: "", fontSize: sepStyle.fontSize, weight: sepStyle.weight, family: sepStyle.family, italic: false });
+      totalContentLength = contentBlocks.reduce((s, b) => s + Math.max(1, b.text.length), 0);
 
-      articleLines = buildArticleLines(text, {
-        maxWidth,
-        wrapText,
-        typography: resolvedConfig.typography,
-      });
-      articleLines.push({
-        kind: "separator",
-        text: separatorText,
-        fontSize: separatorStyle.fontSize,
-        weight: separatorStyle.weight,
-        family: separatorStyle.family,
-        italic: false,
-      });
-
+      // Estimate total line count using average slot width for scroll height
+      const avgWidth = Math.max(1, activeTrack.lineWidth - resolvedConfig.textInset * 2);
+      const avgCharsPerLine = Math.max(1, Math.round(avgWidth / 5));
+      const estimatedLines = totalContentLength / avgCharsPerLine;
       const nextScrollHeight = Math.max(
         resolvedConfig.minScrollHeightVh,
-        Math.ceil(articleLines.length / resolvedConfig.linesPerViewport) * 100,
+        Math.ceil(estimatedLines / resolvedConfig.linesPerViewport) * 100,
       );
 
       if (!disposed) {
@@ -294,7 +285,6 @@ const wrapText = createPretextWrapper();
 
       discElement.querySelectorAll(".radialText__line").forEach((element) => element.remove());
       lineElements = [];
-      prevLineIndices = [];
 
       const fragment = document.createDocumentFragment();
 
@@ -313,45 +303,77 @@ const wrapText = createPretextWrapper();
     function updateConveyorBelt() {
       const maxScroll = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
       const startT = calculateScrollStartT(latestScrollY, maxScroll, 1);
-      const placed = sampleTextTrackLines(
-        articleLines,
-        activeTrack,
-        startT,
-        resolvedConfig.lineSpacing,
-        loop && activeTrack.closed,
-      );
       const isJustify = resolvedConfig.align === "justify";
+      const lineSpacing = resolvedConfig.lineSpacing;
+      const usableLength = activeTrack.closed ? activeTrack.length - lineSpacing : activeTrack.length;
+
+      // Map scroll to character position in content
+      const startChar = startT * totalContentLength;
+      let bIdx = 0, bOff = 0, acc = 0;
+      for (let b = 0; b < contentBlocks.length; b++) {
+        const len = Math.max(1, contentBlocks[b].text.length);
+        if (acc + len > startChar) { bIdx = b; bOff = startChar - acc; break; }
+        acc += len;
+        bIdx = b + 1;
+      }
+
+      // Sub-slot fractional offset for smooth scrolling (mirrors sampleTextTrackLines)
+      const frac = (startT * lineElements.length) % 1;
+
+      let curBIdx = bIdx;
+      let curBOff = bOff;
 
       for (let i = 0; i < lineElements.length; i += 1) {
         const element = lineElements[i];
-        const line = placed[i];
+        if (!element) continue;
 
-        if (!element) {
-          continue;
-        }
-
-        if (!line) {
+        // Mirror sampleTextTrackLines: hide slots outside the usable arc
+        const rawDistance = (i - frac) * lineSpacing;
+        if (rawDistance < 0 || rawDistance >= usableLength) {
           element.style.visibility = "hidden";
           continue;
         }
 
-        element.style.visibility = "";
-        element.style.transform = lineTransform(line);
-
-        if (line._lineIndex !== prevLineIndices[i]) {
-          element.className = `radialText__line radialText__line--${line.kind}`;
-          element.textContent = line.text;
-          element.style.width = `${line.lineWidth}px`;
-          element.style.fontSize = `${line.fontSize}px`;
-          element.style.fontWeight = String(line.weight);
-          element.style.fontFamily = line.family;
-          element.style.fontStyle = line.italic ? "italic" : "normal";
-          element.style.paddingLeft = `${resolvedConfig.textInset}px`;
-          element.style.paddingRight = `${resolvedConfig.textInset}px`;
-          element.style.textAlign = isJustify ? "justify" : resolvedConfig.align;
-          element.style.textAlignLast = isJustify ? "justify" : "";
-          prevLineIndices[i] = line._lineIndex;
+        if (curBIdx >= contentBlocks.length) {
+          if (loop && activeTrack.closed) { curBIdx = 0; curBOff = 0; }
+          else { element.style.visibility = "hidden"; continue; }
         }
+
+        const pt = activeTrack.sampleAt(rawDistance);
+        const slotWidth = pt.lineWidth;
+        const maxWidth = Math.max(1, slotWidth - resolvedConfig.textInset * 2);
+        const block = contentBlocks[curBIdx];
+        let lineText: string;
+
+        if (block.kind === "spacer") {
+          lineText = "";
+          curBIdx++;
+          curBOff = 0;
+        } else if (block.kind === "separator") {
+          lineText = fillLine("=", maxWidth, getStyle("separator", resolvedConfig.typography));
+          curBIdx++;
+          curBOff = 0;
+        } else {
+          const remaining = block.text.slice(Math.max(0, Math.floor(curBOff)));
+          const wrapped = wrapText(remaining, maxWidth, { fontSize: block.fontSize, weight: block.weight, family: block.family, italic: block.italic });
+          lineText = wrapped[0] || "";
+          curBOff += lineText.length + 1;
+          if (Math.floor(curBOff) >= block.text.length) { curBIdx++; curBOff = 0; }
+        }
+
+        element.style.visibility = "";
+        element.style.transform = lineTransform({ x: pt.x, y: pt.y, angleDeg: pt.angleDeg, fontSize: block.fontSize });
+        element.className = `radialText__line radialText__line--${block.kind}`;
+        element.textContent = lineText;
+        element.style.width = `${slotWidth}px`;
+        element.style.fontSize = `${block.fontSize}px`;
+        element.style.fontWeight = String(block.weight);
+        element.style.fontFamily = block.family;
+        element.style.fontStyle = block.italic ? "italic" : "normal";
+        element.style.paddingLeft = `${resolvedConfig.textInset}px`;
+        element.style.paddingRight = `${resolvedConfig.textInset}px`;
+        element.style.textAlign = isJustify ? "justify" : resolvedConfig.align;
+        element.style.textAlignLast = isJustify ? "justify" : "";
       }
 
       ticking = false;

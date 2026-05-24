@@ -9,5 +9,5 @@ export type {
   ArticleTypography,
 } from "./types.js";
 export { parseArticle, normalizeInlineText } from "./parse.js";
-export { buildArticleLines, calculateScrollStartT, getStyle, DEFAULT_BODY_STYLE } from "./lines.js";
+export { buildArticleLines, calculateScrollStartT, getStyle, getArticleBlocks, DEFAULT_BODY_STYLE } from "./lines.js";
 export { measureTextWidth, fillLine, createPretextWrapper } from "./wrap.js";
