@@ -15,7 +15,9 @@
     "html2canvas": "^1.4.1",
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
-    "typescript": "^6.0.3",
-    "vite": "^7.2.4"
+    "typescript": "^6.0.3"
+  },
+  "devDependencies": {
+    "vite": "^8.0.14"
   }
 }
