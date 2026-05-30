@@ -8,13 +8,14 @@ import { exportDiscAsSvg } from "./export/svg";
 
 const DEFAULT_SHAPE_OPTIONS: AppShapeOptions = {
   scale: 1,
-  innerRatio: 0.44,
+  innerRatioX: 0.44,
+  innerRatioY: 0.44,
   align: "left",
   linePadding: 6,
   lineSpacing: 13,
-  shapeX: 0.3,
-  shapeY: 0,
-  cornerRadius: 1,
+  shapeX: 1,
+  shapeY: 1,
+  cornerRadius: 0.7,
   waveAmplitude: 0.35,
   waveCycles: 4,
 };

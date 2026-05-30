@@ -11,7 +11,8 @@ import { createPretextWrapper, fillLine } from "./pretext-wrap";
 
 export interface AppShapeOptions {
   scale: number;
-  innerRatio: number;
+  innerRatioX: number;
+  innerRatioY: number;
   align: "left" | "justify" | "right";
   linePadding: number;
   lineSpacing: number;
@@ -87,8 +88,8 @@ export function createRadialArticleApp({
   };
   let activeShapeKind: "stadium" | "ellipse" | "wave" = "stadium";
   let shapeOptions: AppShapeOptions = {
-    scale: 1, innerRatio: 0.44, align: "left", linePadding: 6, lineSpacing: 13,
-    shapeX: 0.3, shapeY: 0, cornerRadius: 1,
+    scale: 1, innerRatioX: 0.44, innerRatioY: 0.44, align: "left", linePadding: 6, lineSpacing: 13,
+    shapeX: 1, shapeY: 1, cornerRadius: 0.7,
     waveAmplitude: 0.35, waveCycles: 4,
   };
   let shape: TrackShape = createStadiumShape(window.innerWidth, window.innerHeight, shapeOptions);
@@ -96,40 +97,59 @@ export function createRadialArticleApp({
   let ticking = false;
   let resizeFrame = 0;
   let guidesVisible = true;
-  let waveGuide: SVGSVGElement | null = null;
+  let guideSvg: SVGSVGElement | null = null;
+
+  function ensureGuidePaths(count: number): SVGPathElement[] {
+    if (!guideSvg) {
+      guideSvg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+      guideSvg.style.cssText = "position:absolute;inset:0;width:100%;height:100%;pointer-events:none";
+      disc.appendChild(guideSvg);
+    }
+    const w = window.innerWidth, h = window.innerHeight;
+    guideSvg.setAttribute("viewBox", `0 0 ${w} ${h}`);
+    guideSvg.style.visibility = guidesVisible ? "" : "hidden";
+    const existing = Array.from(guideSvg.querySelectorAll("path")) as SVGPathElement[];
+    while (existing.length < count) {
+      const p = document.createElementNS("http://www.w3.org/2000/svg", "path") as SVGPathElement;
+      p.setAttribute("fill", "none");
+      p.setAttribute("stroke-width", "1");
+      guideSvg.appendChild(p);
+      existing.push(p);
+    }
+    existing.forEach((p, i) => { p.style.display = i < count ? "" : "none"; });
+    return existing.slice(0, count);
+  }
 
   function applyGeometry() {
     shape = shapeFactories[activeShapeKind](window.innerWidth, window.innerHeight, shapeOptions);
+    const cx = window.innerWidth / 2, cy = window.innerHeight / 2;
 
-    outerRing.style.width = shape.outerWidth + "px";
-    outerRing.style.height = shape.outerHeight + "px";
-    outerRing.style.borderRadius = shape.outerBorderRadius;
-    outerRing.style.visibility = guidesVisible ? "" : "hidden";
-
-    if (shape.innerGuidePath) {
-      // Wave: draw the actual wavy boundary as an inline SVG
+    if (shape.outerGuidePath) {
+      // Superellipse: both guides as SVG paths, hide CSS rings
+      outerRing.style.visibility = "hidden";
       innerRing.style.visibility = "hidden";
-
-      if (!waveGuide) {
-        waveGuide = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-        waveGuide.style.cssText = "position:absolute;inset:0;width:100%;height:100%;pointer-events:none";
-        const pathEl = document.createElementNS("http://www.w3.org/2000/svg", "path");
-        pathEl.setAttribute("fill", "none");
-        pathEl.setAttribute("stroke-width", "1");
-        waveGuide.appendChild(pathEl);
-        disc.appendChild(waveGuide);
-      }
-
-      const w = window.innerWidth;
-      const h = window.innerHeight;
-      waveGuide.setAttribute("viewBox", `0 0 ${w} ${h}`);
-      waveGuide.style.visibility = guidesVisible ? "" : "hidden";
-      const pathEl = waveGuide.querySelector("path")!;
-      pathEl.setAttribute("d", shape.innerGuidePath(w / 2, h / 2));
-      pathEl.style.stroke = "var(--ring-color)";
+      const [outerPath, innerPath] = ensureGuidePaths(2);
+      outerPath.setAttribute("d", shape.outerGuidePath(cx, cy));
+      outerPath.style.stroke = "var(--ring-color)";
+      innerPath.setAttribute("d", shape.innerGuidePath!(cx, cy));
+      innerPath.style.stroke = "var(--ring-color)";
+    } else if (shape.innerGuidePath) {
+      // Wave: outer is CSS ring, inner is SVG path
+      outerRing.style.width = shape.outerWidth + "px";
+      outerRing.style.height = shape.outerHeight + "px";
+      outerRing.style.borderRadius = shape.outerBorderRadius;
+      outerRing.style.visibility = guidesVisible ? "" : "hidden";
+      innerRing.style.visibility = "hidden";
+      const [innerPath] = ensureGuidePaths(1);
+      innerPath.setAttribute("d", shape.innerGuidePath(cx, cy));
+      innerPath.style.stroke = "var(--ring-color)";
     } else {
-      // Non-wave: use the circle div, hide SVG if present
-      if (waveGuide) waveGuide.style.visibility = "hidden";
+      // Pure CSS: ellipse
+      if (guideSvg) guideSvg.style.visibility = "hidden";
+      outerRing.style.width = shape.outerWidth + "px";
+      outerRing.style.height = shape.outerHeight + "px";
+      outerRing.style.borderRadius = shape.outerBorderRadius;
+      outerRing.style.visibility = guidesVisible ? "" : "hidden";
       innerRing.style.visibility = guidesVisible ? "" : "hidden";
       innerRing.style.width = shape.innerWidth + "px";
       innerRing.style.height = shape.innerHeight + "px";
@@ -139,10 +159,13 @@ export function createRadialArticleApp({
 
   function setGuidesVisible(show: boolean) {
     guidesVisible = show;
-    outerRing.style.visibility = show ? "" : "hidden";
-    if (shape.innerGuidePath) {
-      if (waveGuide) waveGuide.style.visibility = show ? "" : "hidden";
+    if (shape.outerGuidePath) {
+      if (guideSvg) guideSvg.style.visibility = show ? "" : "hidden";
+    } else if (shape.innerGuidePath) {
+      outerRing.style.visibility = show ? "" : "hidden";
+      if (guideSvg) guideSvg.style.visibility = show ? "" : "hidden";
     } else {
+      outerRing.style.visibility = show ? "" : "hidden";
       innerRing.style.visibility = show ? "" : "hidden";
     }
   }

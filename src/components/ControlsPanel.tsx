@@ -175,17 +175,29 @@ export function ControlsPanel({
           {/* Shape-specific sliders */}
           {activeShape === "stadium" && (
             <>
-              <SliderRow label="width" min={0} max={100}
+              <SliderRow label="width" min={10} max={100}
                 value={Math.round(shapeOptions.shapeX * 100)}
                 onChange={(v) => onShapeOptionChange("shapeX", v / 100)}
               />
-              <SliderRow label="height" min={0} max={100}
+              <SliderRow label="height" min={10} max={100}
                 value={Math.round(shapeOptions.shapeY * 100)}
                 onChange={(v) => onShapeOptionChange("shapeY", v / 100)}
               />
               <SliderRow label="corner" min={0} max={100}
                 value={Math.round(shapeOptions.cornerRadius * 100)}
                 onChange={(v) => onShapeOptionChange("cornerRadius", v / 100)}
+              />
+            </>
+          )}
+          {activeShape === "ellipse" && (
+            <>
+              <SliderRow label="width" min={10} max={100}
+                value={Math.round(shapeOptions.shapeX * 100)}
+                onChange={(v) => onShapeOptionChange("shapeX", v / 100)}
+              />
+              <SliderRow label="height" min={10} max={100}
+                value={Math.round(shapeOptions.shapeY * 100)}
+                onChange={(v) => onShapeOptionChange("shapeY", v / 100)}
               />
             </>
           )}
@@ -203,14 +215,20 @@ export function ControlsPanel({
           )}
 
           {/* Common sliders */}
-          <SliderRow label="inner" min={15} max={80}
-            value={Math.round(shapeOptions.innerRatio * 100)}
-            onChange={(v) => onShapeOptionChange("innerRatio", v / 100)}
+          <SliderRow label="inner w" min={15} max={80}
+            value={Math.round(shapeOptions.innerRatioX * 100)}
+            onChange={(v) => onShapeOptionChange("innerRatioX", v / 100)}
           />
-          <SliderRow label="scale" min={30} max={100}
-            value={Math.round(shapeOptions.scale * 100)}
-            onChange={(v) => onShapeOptionChange("scale", v / 100)}
+          <SliderRow label="inner h" min={15} max={80}
+            value={Math.round(shapeOptions.innerRatioY * 100)}
+            onChange={(v) => onShapeOptionChange("innerRatioY", v / 100)}
           />
+          {activeShape === "wave" && (
+            <SliderRow label="scale" min={30} max={100}
+              value={Math.round(shapeOptions.scale * 100)}
+              onChange={(v) => onShapeOptionChange("scale", v / 100)}
+            />
+          )}
           <SliderRow label="spacing" min={9} max={24}
             value={shapeOptions.lineSpacing}
             onChange={(v) => onShapeOptionChange("lineSpacing", v)}

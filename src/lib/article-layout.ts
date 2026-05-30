@@ -33,13 +33,14 @@ export interface TrackShape {
   innerWidth: number;
   innerHeight: number;
   innerBorderRadius: string;
-  /** Returns an SVG path string tracing the inner guide boundary (wave shapes only). */
+  outerGuidePath?(cx: number, cy: number): string;
   innerGuidePath?(cx: number, cy: number): string;
 }
 
 export interface StadiumShapeOptions {
   scale?: number;
-  innerRatio?: number;
+  innerRatioX?: number;
+  innerRatioY?: number;
   shapeX?: number;
   shapeY?: number;
   cornerRadius?: number;
@@ -47,7 +48,10 @@ export interface StadiumShapeOptions {
 
 export interface EllipseShapeOptions {
   scale?: number;
-  innerRatio?: number;
+  innerRatioX?: number;
+  innerRatioY?: number;
+  shapeX?: number;
+  shapeY?: number;
 }
 
 const BODY_STYLE: LineStyle = Object.freeze({
@@ -295,58 +299,132 @@ export function layoutShapeLines(
   return result;
 }
 
+// --- Superellipse helpers ---
+
+function superellipseXY(a: number, b: number, n: number, theta: number) {
+  const c = Math.cos(theta), s = Math.sin(theta);
+  return {
+    x: a * (c < 0 ? -1 : 1) * Math.pow(Math.abs(c), 2 / n),
+    y: b * (s < 0 ? -1 : 1) * Math.pow(Math.abs(s), 2 / n),
+  };
+}
+
+function superellipseNormal(a: number, b: number, n: number, x: number, y: number) {
+  const gx = (x < 0 ? -1 : 1) * Math.pow(Math.abs(x / a), n - 1) / a;
+  const gy = (y < 0 ? -1 : 1) * Math.pow(Math.abs(y / b), n - 1) / b;
+  const len = Math.sqrt(gx * gx + gy * gy) || 1;
+  return { nx: gx / len, ny: gy / len };
+}
+
+// Distance along outward ray from inner superellipse point to outer superellipse boundary.
+function superellipseRayDist(
+  px: number, py: number, nx: number, ny: number,
+  a: number, b: number, n: number,
+): number {
+  let lo = 0, hi = a + b;
+  for (let i = 0; i < 48; i++) {
+    const mid = (lo + hi) / 2;
+    const v = Math.pow(Math.abs((px + mid * nx) / a), n) + Math.pow(Math.abs((py + mid * ny) / b), n);
+    if (v < 1) lo = mid; else hi = mid;
+  }
+  return (lo + hi) / 2;
+}
+
+const SUPERELLIPSE_SAMPLES = 720;
+
 export function createStadiumShape(
   viewportWidth: number,
   viewportHeight: number,
-  { scale = 1, innerRatio = INNER_RADIUS_RATIO, shapeX = 0, shapeY = 0, cornerRadius = 1 }: StadiumShapeOptions = {},
+  // cornerRadius: 1→n=2 (ellipse/organic), 0→n=20 (near-rectangular)
+  { innerRatioX = INNER_RADIUS_RATIO, innerRatioY = INNER_RADIUS_RATIO, shapeX = 1, shapeY = 1, cornerRadius = 0.7 }: StadiumShapeOptions = {},
 ): TrackShape {
-  const baseR = Math.max(1, Math.floor(Math.min(viewportWidth, viewportHeight) / 2 * scale) - DISC_MARGIN);
-  const trackWidth = Math.max(1, Math.round(baseR * (1 - innerRatio)));
-  const innerRMax = Math.max(1, baseR - trackWidth);
+  const n = 2 + (1 - cornerRadius) * 18;
 
-  const outerCornerR = Math.round(baseR * cornerRadius);
-  const innerCornerR = Math.max(0, outerCornerR - trackWidth);
+  const outerHalfW = Math.max(1, Math.round(viewportWidth / 2 * shapeX) - DISC_MARGIN);
+  const outerHalfH = Math.max(1, Math.round(viewportHeight / 2 * shapeY) - DISC_MARGIN);
+  const baseR = Math.max(1, Math.min(outerHalfW, outerHalfH));
 
-  const halfW = Math.floor(viewportWidth / 2 * scale) - DISC_MARGIN;
-  const halfH = Math.floor(viewportHeight / 2 * scale) - DISC_MARGIN;
-  const maxOffset = Math.max(0, Math.max(halfW, halfH) - outerCornerR);
-  const baseOffsetX = Math.round(shapeX * maxOffset);
-  const baseOffsetY = Math.round(shapeY * maxOffset);
+  const trackWidthX = Math.max(1, Math.round(baseR * (1 - innerRatioX)));
+  const trackWidthY = Math.max(1, Math.round(baseR * (1 - innerRatioY)));
+  const innerHalfW = Math.max(1, outerHalfW - trackWidthX);
+  const innerHalfH = Math.max(1, outerHalfH - trackWidthY);
 
-  const arcOffsetX = baseOffsetX + (innerRMax - innerCornerR);
-  const arcOffsetY = baseOffsetY + (innerRMax - innerCornerR);
-
-  const quarterArc = (Math.PI / 2) * innerCornerR;
-  const perimeter = 4 * arcOffsetX + 4 * arcOffsetY + 4 * quarterArc;
+  // Build arc-length lookup table along the inner superellipse.
+  type SamplePt = { x: number; y: number; nx: number; ny: number; lw: number; cum: number };
+  const pts: SamplePt[] = new Array(SUPERELLIPSE_SAMPLES + 1);
+  let cum = 0;
+  for (let i = 0; i <= SUPERELLIPSE_SAMPLES; i++) {
+    const theta = (i / SUPERELLIPSE_SAMPLES) * 2 * Math.PI - Math.PI / 2;
+    const { x, y } = superellipseXY(innerHalfW, innerHalfH, n, theta);
+    const { nx, ny } = superellipseNormal(innerHalfW, innerHalfH, n, x, y);
+    const lw = Math.max(1, superellipseRayDist(x, y, nx, ny, outerHalfW, outerHalfH, n));
+    if (i > 0) {
+      const dx = x - pts[i - 1].x, dy = y - pts[i - 1].y;
+      cum += Math.sqrt(dx * dx + dy * dy);
+    }
+    pts[i] = { x, y, nx, ny, lw, cum };
+  }
+  const perimeter = cum;
 
   function point(t: number) {
-    const s = ((t % 1) + 1) % 1 * perimeter;
-    return roundedRectPoint(s, arcOffsetX, arcOffsetY, innerCornerR);
+    const target = ((t % 1) + 1) % 1 * perimeter;
+    let lo = 0, hi = SUPERELLIPSE_SAMPLES;
+    while (hi - lo > 1) {
+      const mid = (lo + hi) >> 1;
+      if (pts[mid].cum <= target) lo = mid; else hi = mid;
+    }
+    const p = pts[lo], q = pts[hi];
+    const f = q.cum > p.cum ? (target - p.cum) / (q.cum - p.cum) : 0;
+    const nx = p.nx + f * (q.nx - p.nx);
+    const ny = p.ny + f * (q.ny - p.ny);
+    return {
+      x: p.x + f * (q.x - p.x),
+      y: p.y + f * (q.y - p.y),
+      angleDeg: Math.atan2(ny, nx) * (180 / Math.PI),
+      lineWidth: p.lw + f * (q.lw - p.lw),
+    };
+  }
+
+  function makeSvgPath(a: number, b: number) {
+    return (cx: number, cy: number): string => {
+      const parts: string[] = [];
+      for (let i = 0; i <= 360; i++) {
+        const theta = (i / 360) * 2 * Math.PI - Math.PI / 2;
+        const { x, y } = superellipseXY(a, b, n, theta);
+        parts.push(`${i === 0 ? "M" : "L"}${(cx + x).toFixed(1)},${(cy + y).toFixed(1)}`);
+      }
+      parts.push("Z");
+      return parts.join(" ");
+    };
   }
 
   return {
     point,
     perimeter,
-    lineWidth: trackWidth,
-    outerWidth: 2 * (baseOffsetX + baseR),
-    outerHeight: 2 * (baseOffsetY + baseR),
-    outerBorderRadius: outerCornerR + "px",
-    innerWidth: 2 * (baseOffsetX + innerRMax),
-    innerHeight: 2 * (baseOffsetY + innerRMax),
-    innerBorderRadius: innerCornerR + "px",
+    lineWidth: Math.min(trackWidthX, trackWidthY),
+    outerWidth: outerHalfW * 2,
+    outerHeight: outerHalfH * 2,
+    outerBorderRadius: "50%",
+    innerWidth: innerHalfW * 2,
+    innerHeight: innerHalfH * 2,
+    innerBorderRadius: "50%",
+    outerGuidePath: makeSvgPath(outerHalfW, outerHalfH),
+    innerGuidePath: makeSvgPath(innerHalfW, innerHalfH),
   };
 }
 
 export function createEllipseShape(
   viewportWidth: number,
   viewportHeight: number,
-  { scale = 1, innerRatio = INNER_RADIUS_RATIO }: EllipseShapeOptions = {},
+  { innerRatioX = INNER_RADIUS_RATIO, innerRatioY = INNER_RADIUS_RATIO, shapeX = 1, shapeY = 1 }: EllipseShapeOptions = {},
 ): TrackShape {
-  const outerA = Math.max(1, Math.floor(viewportWidth / 2 * scale) - DISC_MARGIN);
-  const outerB = Math.max(1, Math.floor(viewportHeight / 2 * scale) - DISC_MARGIN);
-  const trackWidth = Math.max(1, Math.round(Math.min(outerA, outerB) * (1 - innerRatio)));
-  const innerA = Math.max(1, outerA - trackWidth);
-  const innerB = Math.max(1, outerB - trackWidth);
+  const outerA = Math.max(1, Math.round(viewportWidth / 2 * shapeX) - DISC_MARGIN);
+  const outerB = Math.max(1, Math.round(viewportHeight / 2 * shapeY) - DISC_MARGIN);
+  const base = Math.min(outerA, outerB);
+  const trackWidthX = Math.max(1, Math.round(base * (1 - innerRatioX)));
+  const trackWidthY = Math.max(1, Math.round(base * (1 - innerRatioY)));
+  const innerA = Math.max(1, outerA - trackWidthX);
+  const innerB = Math.max(1, outerB - trackWidthY);
 
   function point(t: number) {
     const angle = ((t % 1) + 1) % 1 * 2 * Math.PI - Math.PI / 2;
@@ -359,16 +437,15 @@ export function createEllipseShape(
     const gl = Math.sqrt(gx * gx + gy * gy);
     const nx = gx / gl;
     const ny = gy / gl;
-    const lineWidth = Math.min(trackWidth, ellipseRayDist(px, py, nx, ny, outerA, outerB));
     return {
       x: px,
       y: py,
       angleDeg: Math.atan2(ny, nx) * (180 / Math.PI),
-      lineWidth,
+      lineWidth: ellipseRayDist(px, py, nx, ny, outerA, outerB),
     };
   }
 
-  let minLineWidth = trackWidth;
+  let minLineWidth = Math.min(trackWidthX, trackWidthY);
   let ellipsePerimeter = 0;
   let prevPt = point(0);
   for (let i = 1; i <= 360; i++) {
@@ -395,7 +472,8 @@ export function createEllipseShape(
 
 export interface WaveShapeOptions {
   scale?: number;
-  innerRatio?: number;
+  innerRatioX?: number;
+  innerRatioY?: number;
   waveAmplitude?: number; // fraction of track width, 0–0.9
   waveCycles?: number;    // integer number of full sine cycles around the ring
 }
@@ -408,9 +486,10 @@ export interface WaveShapeOptions {
 export function createWaveShape(
   viewportWidth: number,
   viewportHeight: number,
-  { scale = 1, innerRatio = INNER_RADIUS_RATIO, waveAmplitude = 0.35, waveCycles = 4 }: WaveShapeOptions = {},
+  { scale = 1, innerRatioX = INNER_RADIUS_RATIO, innerRatioY = INNER_RADIUS_RATIO, waveAmplitude = 0.35, waveCycles = 4 }: WaveShapeOptions = {},
 ): TrackShape {
   const outerR = Math.max(1, Math.floor(Math.min(viewportWidth, viewportHeight) / 2 * scale) - DISC_MARGIN);
+  const innerRatio = (innerRatioX + innerRatioY) / 2;
   const trackWidth = Math.max(1, Math.round(outerR * (1 - innerRatio)));
   const midInnerR = outerR - trackWidth;
   const cycles = Math.max(1, Math.round(waveCycles));
@@ -485,59 +564,6 @@ function ellipseRayDist(px: number, py: number, nx: number, ny: number, a: numbe
   return (-B + Math.sqrt(disc)) / (2 * A);
 }
 
-function roundedRectPoint(
-  s: number,
-  arcOffsetX: number,
-  arcOffsetY: number,
-  radius: number,
-): { x: number; y: number; angleDeg: number } {
-  const qa = (Math.PI / 2) * radius;
-
-  if (s < 2 * arcOffsetX) {
-    return { x: -arcOffsetX + s, y: -(arcOffsetY + radius), angleDeg: -90 };
-  }
-  s -= 2 * arcOffsetX;
-
-  if (s < qa) {
-    const alpha = -90 + (s / qa) * 90;
-    const rad = alpha * (Math.PI / 180);
-    return { x: arcOffsetX + radius * Math.cos(rad), y: -arcOffsetY + radius * Math.sin(rad), angleDeg: alpha };
-  }
-  s -= qa;
-
-  if (s < 2 * arcOffsetY) {
-    return { x: arcOffsetX + radius, y: -arcOffsetY + s, angleDeg: 0 };
-  }
-  s -= 2 * arcOffsetY;
-
-  if (s < qa) {
-    const alpha = (s / qa) * 90;
-    const rad = alpha * (Math.PI / 180);
-    return { x: arcOffsetX + radius * Math.cos(rad), y: arcOffsetY + radius * Math.sin(rad), angleDeg: alpha };
-  }
-  s -= qa;
-
-  if (s < 2 * arcOffsetX) {
-    return { x: arcOffsetX - s, y: arcOffsetY + radius, angleDeg: 90 };
-  }
-  s -= 2 * arcOffsetX;
-
-  if (s < qa) {
-    const alpha = 90 + (s / qa) * 90;
-    const rad = alpha * (Math.PI / 180);
-    return { x: -arcOffsetX + radius * Math.cos(rad), y: arcOffsetY + radius * Math.sin(rad), angleDeg: alpha };
-  }
-  s -= qa;
-
-  if (s < 2 * arcOffsetY) {
-    return { x: -(arcOffsetX + radius), y: arcOffsetY - s, angleDeg: 180 };
-  }
-  s -= 2 * arcOffsetY;
-
-  const alpha = 180 + (s / qa) * 90;
-  const rad = alpha * (Math.PI / 180);
-  return { x: -arcOffsetX + radius * Math.cos(rad), y: -arcOffsetY + radius * Math.sin(rad), angleDeg: alpha };
-}
 
 export function getStyle(kind: string): LineStyle {
   return STYLE_BY_KIND[kind] ?? BODY_STYLE;
