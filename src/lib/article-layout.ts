@@ -44,6 +44,7 @@ export interface StadiumShapeOptions {
   shapeX?: number;
   shapeY?: number;
   cornerRadius?: number;
+  rectyCorner?: number;
 }
 
 export interface EllipseShapeOptions {
@@ -297,6 +298,105 @@ export function layoutShapeLines(
     result.push({ ...lines[lineIndex], ...pt, _lineIndex: lineIndex });
   }
   return result;
+}
+
+// --- Rounded-rectangle (recty) shape ---
+
+// Signed distance to a rounded rectangle (negative = inside, 0 = on boundary).
+function rrSdf(x: number, y: number, W: number, H: number, R: number): number {
+  const qx = Math.abs(x) - (W - R);
+  const qy = Math.abs(y) - (H - R);
+  return Math.sqrt(Math.max(qx, 0) ** 2 + Math.max(qy, 0) ** 2) + Math.min(Math.max(qx, qy), 0) - R;
+}
+
+// Distance along outward ray from inner-path point to outer rounded-rect boundary.
+function rrRayDist(px: number, py: number, nx: number, ny: number, W: number, H: number, R: number): number {
+  let lo = 0, hi = W + H;
+  for (let i = 0; i < 48; i++) {
+    const mid = (lo + hi) / 2;
+    if (rrSdf(px + mid * nx, py + mid * ny, W, H, R) < 0) lo = mid; else hi = mid;
+  }
+  return (lo + hi) / 2;
+}
+
+function roundedRectPoint(
+  s: number,
+  arcOffsetX: number,
+  arcOffsetY: number,
+  radius: number,
+  trackWidthX: number,
+  trackWidthY: number,
+): { x: number; y: number; angleDeg: number; lineWidth: number } {
+  const qa = (Math.PI / 2) * radius;
+  const cornerLW = Math.min(trackWidthX, trackWidthY);
+
+  if (s < 2 * arcOffsetX) return { x: -arcOffsetX + s, y: -(arcOffsetY + radius), angleDeg: -90, lineWidth: trackWidthY };
+  s -= 2 * arcOffsetX;
+  if (s < qa) { const a = -90 + (s / qa) * 90, r = a * (Math.PI / 180); return { x: arcOffsetX + radius * Math.cos(r), y: -arcOffsetY + radius * Math.sin(r), angleDeg: a, lineWidth: cornerLW }; }
+  s -= qa;
+  if (s < 2 * arcOffsetY) return { x: arcOffsetX + radius, y: -arcOffsetY + s, angleDeg: 0, lineWidth: trackWidthX };
+  s -= 2 * arcOffsetY;
+  if (s < qa) { const a = (s / qa) * 90, r = a * (Math.PI / 180); return { x: arcOffsetX + radius * Math.cos(r), y: arcOffsetY + radius * Math.sin(r), angleDeg: a, lineWidth: cornerLW }; }
+  s -= qa;
+  if (s < 2 * arcOffsetX) return { x: arcOffsetX - s, y: arcOffsetY + radius, angleDeg: 90, lineWidth: trackWidthY };
+  s -= 2 * arcOffsetX;
+  if (s < qa) { const a = 90 + (s / qa) * 90, r = a * (Math.PI / 180); return { x: -arcOffsetX + radius * Math.cos(r), y: arcOffsetY + radius * Math.sin(r), angleDeg: a, lineWidth: cornerLW }; }
+  s -= qa;
+  if (s < 2 * arcOffsetY) return { x: -(arcOffsetX + radius), y: arcOffsetY - s, angleDeg: 180, lineWidth: trackWidthX };
+  s -= 2 * arcOffsetY;
+  const a = 180 + (s / qa) * 90, r = a * (Math.PI / 180);
+  return { x: -arcOffsetX + radius * Math.cos(r), y: -arcOffsetY + radius * Math.sin(r), angleDeg: a, lineWidth: cornerLW };
+}
+
+export function createRectyShape(
+  viewportWidth: number,
+  viewportHeight: number,
+  { innerRatioX = INNER_RADIUS_RATIO, innerRatioY = INNER_RADIUS_RATIO, shapeX = 1, shapeY = 1, rectyCorner = 0.3 }: StadiumShapeOptions = {},
+): TrackShape {
+  const cornerRadius = rectyCorner;
+  const outerHalfW = Math.max(1, Math.round(viewportWidth / 2 * shapeX) - DISC_MARGIN);
+  const outerHalfH = Math.max(1, Math.round(viewportHeight / 2 * shapeY) - DISC_MARGIN);
+  const baseR = Math.max(1, Math.min(outerHalfW, outerHalfH));
+  const baseOffsetX = Math.max(0, outerHalfW - baseR);
+  const baseOffsetY = Math.max(0, outerHalfH - baseR);
+
+  const trackWidthX = Math.max(1, Math.round(baseR * (1 - innerRatioX)));
+  const trackWidthY = Math.max(1, Math.round(baseR * (1 - innerRatioY)));
+  const innerRMaxX = Math.max(1, baseR - trackWidthX);
+  const innerRMaxY = Math.max(1, baseR - trackWidthY);
+
+  const outerCornerR = Math.round(baseR * cornerRadius);
+  const innerCornerR = Math.round(cornerRadius * Math.min(innerRMaxX, innerRMaxY));
+
+  const arcOffsetX = baseOffsetX + (innerRMaxX - innerCornerR);
+  const arcOffsetY = baseOffsetY + (innerRMaxY - innerCornerR);
+  const quarterArc = (Math.PI / 2) * innerCornerR;
+  const perimeter = 4 * arcOffsetX + 4 * arcOffsetY + 4 * quarterArc;
+
+  function point(t: number) {
+    const s = ((t % 1) + 1) % 1 * perimeter;
+    const p = roundedRectPoint(s, arcOffsetX, arcOffsetY, innerCornerR, trackWidthX, trackWidthY);
+    const nx = Math.cos(p.angleDeg * Math.PI / 180);
+    const ny = Math.sin(p.angleDeg * Math.PI / 180);
+    return {
+      x: p.x,
+      y: p.y,
+      angleDeg: p.angleDeg,
+      lineWidth: Math.max(1, rrRayDist(p.x, p.y, nx, ny, outerHalfW, outerHalfH, outerCornerR)),
+    };
+  }
+
+  return {
+    point,
+    perimeter,
+    lineWidth: Math.min(trackWidthX, trackWidthY),
+    outerWidth: 2 * (baseOffsetX + baseR),
+    outerHeight: 2 * (baseOffsetY + baseR),
+    outerBorderRadius: outerCornerR + "px",
+    innerWidth: 2 * (baseOffsetX + innerRMaxX),
+    innerHeight: 2 * (baseOffsetY + innerRMaxY),
+    innerBorderRadius: innerCornerR + "px",
+  };
 }
 
 // --- Superellipse helpers ---

@@ -16,6 +16,7 @@ const DEFAULT_SHAPE_OPTIONS: AppShapeOptions = {
   shapeX: 1,
   shapeY: 1,
   cornerRadius: 0.7,
+  rectyCorner: 0.3,
   waveAmplitude: 0.35,
   waveCycles: 4,
 };
@@ -69,7 +70,7 @@ export const FONT_PRESETS: FontPreset[] = [
 export default function App() {
   const discRef = useRef<RadialDiscHandle>(null);
   const [shapeOptions, setShapeOptions] = useState<AppShapeOptions>(DEFAULT_SHAPE_OPTIONS);
-  const [activeShape, setActiveShape] = useState<"stadium" | "ellipse" | "wave">("stadium");
+  const [activeShape, setActiveShape] = useState<"stadium" | "ellipse" | "wave" | "recty">("stadium");
   const [loop, setLoop] = useState(false);
   const [theme, setTheme] = useState<"light" | "dark">("light");
   const [showGuides, setShowGuides] = useState(true);

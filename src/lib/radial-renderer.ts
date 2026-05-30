@@ -2,6 +2,7 @@ import {
   getArticleBlocks,
   createEllipseShape,
   createStadiumShape,
+  createRectyShape,
   createWaveShape,
   type ParsedArticleBlock,
   type TrackShape,
@@ -16,10 +17,11 @@ export interface AppShapeOptions {
   align: "left" | "justify" | "right";
   linePadding: number;
   lineSpacing: number;
-  // stadium
+  // stadium / recty
   shapeX: number;
   shapeY: number;
   cornerRadius: number;
+  rectyCorner: number;
   // wave
   waveAmplitude: number;
   waveCycles: number;
@@ -48,7 +50,7 @@ export interface RadialArticleApp {
   setShape(kind: "stadium" | "ellipse"): void;
   setOptions(opts: Partial<AppShapeOptions>): void;
   setLoop(val: boolean): void;
-  setShape(kind: "stadium" | "ellipse" | "wave"): void;
+  setShape(kind: "stadium" | "ellipse" | "wave" | "recty"): void;
   setTypography(opts: TypographyOptions): void;
   setGuidesVisible(show: boolean): void;
   getDiscEl(): HTMLElement;
@@ -85,11 +87,12 @@ export function createRadialArticleApp({
     stadium: (w: number, h: number, o: AppShapeOptions) => createStadiumShape(w, h, o),
     ellipse: (w: number, h: number, o: AppShapeOptions) => createEllipseShape(w, h, o),
     wave:    (w: number, h: number, o: AppShapeOptions) => createWaveShape(w, h, o),
+    recty:   (w: number, h: number, o: AppShapeOptions) => createRectyShape(w, h, o),
   };
-  let activeShapeKind: "stadium" | "ellipse" | "wave" = "stadium";
+  let activeShapeKind: "stadium" | "ellipse" | "wave" | "recty" = "stadium";
   let shapeOptions: AppShapeOptions = {
     scale: 1, innerRatioX: 0.44, innerRatioY: 0.44, align: "left", linePadding: 6, lineSpacing: 13,
-    shapeX: 1, shapeY: 1, cornerRadius: 0.7,
+    shapeX: 1, shapeY: 1, cornerRadius: 0.7, rectyCorner: 0.3,
     waveAmplitude: 0.35, waveCycles: 4,
   };
   let shape: TrackShape = createStadiumShape(window.innerWidth, window.innerHeight, shapeOptions);
