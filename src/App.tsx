@@ -21,7 +21,7 @@ const DEFAULT_SHAPE_OPTIONS: AppShapeOptions = {
   waveCycles: 4,
 };
 
-const DEFAULT_ARTICLE_URL = "sample big.txt";
+const DEFAULT_ARTICLE_URL = "sample-big.txt";
 
 export type FontPresetId = "serif" | "sans" | "mono";
 
