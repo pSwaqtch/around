@@ -5,14 +5,14 @@ import type { FontPresetId } from "../App";
 
 interface Props {
   shapeOptions: AppShapeOptions;
-  activeShape: "stadium" | "ellipse" | "wave" | "recty";
+  activeShape: "stadium" | "ellipse" | "wave" | "recty" | "dna";
   loop: boolean;
   theme: "light" | "dark";
   showGuides: boolean;
   fontPresetId: FontPresetId;
   isExporting: boolean;
   onShapeOptionChange: (key: keyof AppShapeOptions, value: number | string) => void;
-  onShapeChange: (shape: "stadium" | "ellipse" | "wave" | "recty") => void;
+  onShapeChange: (shape: "stadium" | "ellipse" | "wave" | "recty" | "dna") => void;
   onLoopChange: (val: boolean) => void;
   onThemeChange: () => void;
   onShowGuidesChange: (val: boolean) => void;
@@ -22,11 +22,12 @@ interface Props {
   onExportSvg: () => void;
 }
 
-const SHAPES: Array<{ id: "stadium" | "ellipse" | "wave" | "recty"; label: string }> = [
+const SHAPES: Array<{ id: "stadium" | "ellipse" | "wave" | "recty" | "dna"; label: string }> = [
   { id: "stadium", label: "stadium" },
   { id: "recty", label: "recty" },
   { id: "ellipse", label: "ellipse" },
   { id: "wave", label: "wave" },
+  { id: "dna", label: "dna" },
 ];
 
 const ALIGNMENTS: Array<AppShapeOptions["align"]> = ["left", "justify", "right"];
@@ -211,6 +212,22 @@ export function ControlsPanel({
               <SliderRow label="cycles" min={1} max={12}
                 value={shapeOptions.waveCycles}
                 onChange={(v) => onShapeOptionChange("waveCycles", v)}
+              />
+            </>
+          )}
+          {activeShape === "dna" && (
+            <>
+              <SliderRow label="pitch" min={1} max={8}
+                value={shapeOptions.dnaPitch}
+                onChange={(v) => onShapeOptionChange("dnaPitch", v)}
+              />
+              <SliderRow label="amplitude" min={10} max={60}
+                value={Math.round(shapeOptions.dnaAmplitude * 100)}
+                onChange={(v) => onShapeOptionChange("dnaAmplitude", v / 100)}
+              />
+              <SliderRow label="strand gap" min={60} max={200}
+                value={shapeOptions.dnaStrandGap}
+                onChange={(v) => onShapeOptionChange("dnaStrandGap", v)}
               />
             </>
           )}

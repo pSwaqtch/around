@@ -1,58 +1,16 @@
 import {
   getArticleBlocks,
-  createEllipseShape,
-  createStadiumShape,
-  createRectyShape,
-  createWaveShape,
   createDnaHelix,
   type ParsedArticleBlock,
   type TrackShape,
 } from "./article-layout";
 import { createPretextWrapper, fillLine } from "./pretext-wrap";
+import type { AppShapeOptions, TypographyOptions } from "./radial-renderer";
 
-
-export interface AppShapeOptions {
-  scale: number;
-  innerRatioX: number;
-  innerRatioY: number;
-  align: "left" | "justify" | "right";
-  linePadding: number;
-  lineSpacing: number;
-  // stadium / recty
-  shapeX: number;
-  shapeY: number;
-  cornerRadius: number;
-  rectyCorner: number;
-  // wave
-  waveAmplitude: number;
-  waveCycles: number;
-  // dna
-  dnaPitch: number;
-  dnaAmplitude: number;
-  dnaStrandGap: number;
-}
-
-export interface TypographyOptions {
-  fontFamily: string;
-  bodySize: number;
-  headingSize: number;
-  bodyWeight: number;
-  headingWeight: number;
-}
-
-export const DEFAULT_TYPOGRAPHY: TypographyOptions = {
-  fontFamily: "Georgia, serif",
-  bodySize: 9,
-  headingSize: 11,
-  bodyWeight: 400,
-  headingWeight: 700,
-};
-
-export interface RadialArticleApp {
+export interface LinearArticleApp {
   start(): void;
   destroy(): void;
   loadText(text: string): void;
-  setShape(kind: "stadium" | "ellipse" | "wave" | "recty" | "dna"): void;
   setOptions(opts: Partial<AppShapeOptions>): void;
   setLoop(val: boolean): void;
   setTypography(opts: TypographyOptions): void;
@@ -60,17 +18,21 @@ export interface RadialArticleApp {
   getDiscEl(): HTMLElement;
 }
 
-export function createRadialArticleApp({
+export function createLinearArticleApp({
   disc,
   outerRing,
   innerRing,
   status,
+  shapeOptions: initialShapeOptions,
+  typography: initialTypography,
 }: {
   disc: HTMLElement;
   outerRing: HTMLElement;
   innerRing: HTMLElement;
   status: HTMLElement;
-}): RadialArticleApp {
+  shapeOptions: AppShapeOptions;
+  typography: TypographyOptions;
+}): LinearArticleApp {
   const wrapText = createPretextWrapper();
 
   interface ContentBlock {
@@ -81,34 +43,19 @@ export function createRadialArticleApp({
     italic: boolean;
   }
 
-  let typography: TypographyOptions = { ...DEFAULT_TYPOGRAPHY };
+  let typography = { ...initialTypography };
+  let shapeOptions = { ...initialShapeOptions };
   let articleText = "";
   let contentBlocks: ContentBlock[] = [];
   let totalContentLength = 0;
   let lineElements: HTMLElement[] = [];
   let loopContent = false;
-  const shapeFactories = {
-    stadium: (w: number, h: number, o: AppShapeOptions) => createStadiumShape(w, h, o),
-    ellipse: (w: number, h: number, o: AppShapeOptions) => createEllipseShape(w, h, o),
-    wave:    (w: number, h: number, o: AppShapeOptions) => createWaveShape(w, h, o),
-    recty:   (w: number, h: number, o: AppShapeOptions) => createRectyShape(w, h, o),
-    dna:     (w: number, h: number, o: AppShapeOptions) => createDnaHelix(w, h, o),
-  };
-  let activeShapeKind: "stadium" | "ellipse" | "wave" | "recty" | "dna" = "stadium";
-  let shapeOptions: AppShapeOptions = {
-    scale: 1, innerRatioX: 0.44, innerRatioY: 0.44, align: "left", linePadding: 6, lineSpacing: 13,
-    shapeX: 1, shapeY: 1, cornerRadius: 0.7, rectyCorner: 0.3,
-    waveAmplitude: 0.35, waveCycles: 4,
-    dnaPitch: 4, dnaAmplitude: 0.35, dnaStrandGap: 100,
-  };
-  let shape: TrackShape = createStadiumShape(window.innerWidth, window.innerHeight, shapeOptions);
+  let shape: TrackShape = createDnaHelix(window.innerWidth, window.innerHeight, shapeOptions);
   let latestScrollY = 0;
   let ticking = false;
   let resizeFrame = 0;
   let guidesVisible = true;
   let guideSvg: SVGSVGElement | null = null;
-  let clipDefsContainer: SVGDefsElement | null = null;
-  let clipIdCounter = 0;
 
   function ensureGuidePaths(count: number): SVGPathElement[] {
     if (!guideSvg) {
@@ -132,52 +79,17 @@ export function createRadialArticleApp({
   }
 
   function applyGeometry() {
-    shape = shapeFactories[activeShapeKind](window.innerWidth, window.innerHeight, shapeOptions);
+    shape = createDnaHelix(window.innerWidth, window.innerHeight, shapeOptions);
     const cx = window.innerWidth / 2, cy = window.innerHeight / 2;
 
-    if (shape.outerGuidePath) {
-      // Superellipse: both guides as SVG paths, hide CSS rings
+    if (shape.outerGuidePath && shape.innerGuidePath) {
       outerRing.style.visibility = "hidden";
       innerRing.style.visibility = "hidden";
       const [outerPath, innerPath] = ensureGuidePaths(2);
       outerPath.setAttribute("d", shape.outerGuidePath(cx, cy));
       outerPath.style.stroke = "var(--ring-color)";
-      innerPath.setAttribute("d", shape.innerGuidePath!(cx, cy));
-      innerPath.style.stroke = "var(--ring-color)";
-    } else if (shape.innerGuidePath) {
-      // Wave: outer is CSS ring, inner is SVG path
-      outerRing.style.width = shape.outerWidth + "px";
-      outerRing.style.height = shape.outerHeight + "px";
-      outerRing.style.borderRadius = shape.outerBorderRadius;
-      outerRing.style.visibility = guidesVisible ? "" : "hidden";
-      innerRing.style.visibility = "hidden";
-      const [innerPath] = ensureGuidePaths(1);
       innerPath.setAttribute("d", shape.innerGuidePath(cx, cy));
       innerPath.style.stroke = "var(--ring-color)";
-    } else {
-      // Pure CSS: ellipse
-      if (guideSvg) guideSvg.style.visibility = "hidden";
-      outerRing.style.width = shape.outerWidth + "px";
-      outerRing.style.height = shape.outerHeight + "px";
-      outerRing.style.borderRadius = shape.outerBorderRadius;
-      outerRing.style.visibility = guidesVisible ? "" : "hidden";
-      innerRing.style.visibility = guidesVisible ? "" : "hidden";
-      innerRing.style.width = shape.innerWidth + "px";
-      innerRing.style.height = shape.innerHeight + "px";
-      innerRing.style.borderRadius = shape.innerBorderRadius;
-    }
-  }
-
-  function setGuidesVisible(show: boolean) {
-    guidesVisible = show;
-    if (shape.outerGuidePath) {
-      if (guideSvg) guideSvg.style.visibility = show ? "" : "hidden";
-    } else if (shape.innerGuidePath) {
-      outerRing.style.visibility = show ? "" : "hidden";
-      if (guideSvg) guideSvg.style.visibility = show ? "" : "hidden";
-    } else {
-      outerRing.style.visibility = show ? "" : "hidden";
-      innerRing.style.visibility = show ? "" : "hidden";
     }
   }
 
@@ -191,12 +103,11 @@ export function createRadialArticleApp({
       weight: b.kind === "heading" ? ty.headingWeight : ty.bodyWeight,
       italic: Boolean(b.style.italic),
     }));
-    // Separator acts as a visible end-of-content marker; text generated per slot at render time
     contentBlocks.push({ kind: "separator", text: "", fontSize: ty.bodySize, weight: ty.bodyWeight, italic: false });
     totalContentLength = contentBlocks.reduce((s, b) => s + Math.max(1, b.text.length), 0);
   }
 
-  function renderRadial() {
+  function renderLinear() {
     const numSlots = Math.ceil(shape.perimeter / shapeOptions.lineSpacing) + 1;
     disc.querySelectorAll(".line").forEach((el) => el.remove());
     lineElements = [];
@@ -215,7 +126,6 @@ export function createRadialArticleApp({
   }
 
   function setScrollHeight() {
-    // Estimate line count using average content width so scroll range feels proportional
     const avgContentWidth = Math.max(1, shape.lineWidth - shapeOptions.linePadding * 2);
     const avgCharsPerLine = Math.max(1, Math.round(avgContentWidth / 5));
     const estimatedLines = totalContentLength / avgCharsPerLine;
@@ -231,7 +141,6 @@ export function createRadialArticleApp({
     const startT = loopContent ? ((rawT % 1) + 1) % 1 : Math.max(0, Math.min(rawT, 1));
     const isJustify = shapeOptions.align === "justify";
 
-    // Map scroll position to starting character position in content
     const startChar = startT * totalContentLength;
     let bIdx = 0;
     let bOff = 0;
@@ -243,7 +152,6 @@ export function createRadialArticleApp({
       bIdx = b + 1;
     }
 
-    // Sub-slot fractional offset for smooth scrolling
     const step = shapeOptions.lineSpacing / shape.perimeter;
     const slotsFromStart = startT / step;
     const frac = slotsFromStart - Math.floor(slotsFromStart);
@@ -253,9 +161,6 @@ export function createRadialArticleApp({
 
     for (let i = 0; i < lineElements.length; i++) {
       const el = lineElements[i];
-
-      // rawT is the normalized angular position; mirrors the layoutShapeLines convention.
-      // Negative rawT or rawT >= 1 means the slot is outside the visible arc this frame.
       const rawT = (i - frac) * step;
       if (rawT < 0 || rawT >= 1) {
         el.style.visibility = "hidden";
@@ -293,7 +198,7 @@ export function createRadialArticleApp({
       }
 
       el.style.visibility = "";
-      el.style.transform = lineTransform({ x: pt.x, y: pt.y, angleDeg: pt.angleDeg, fontSize: block.fontSize });
+      el.style.transform = `translate(${pt.x + window.innerWidth / 2}px, ${pt.y + window.innerHeight / 2}px) rotate(${pt.angleDeg}deg)`;
       el.className = `line line--${block.kind}`;
       el.textContent = lineText;
       el.style.width = slotWidth + "px";
@@ -305,6 +210,8 @@ export function createRadialArticleApp({
       el.style.paddingRight = shapeOptions.linePadding + "px";
       el.style.textAlign = isJustify ? "justify" : shapeOptions.align;
       el.style.textAlignLast = isJustify ? "justify" : "";
+      el.style.whiteSpace = "nowrap";
+      el.style.overflow = "hidden";
     }
 
     ticking = false;
@@ -312,7 +219,6 @@ export function createRadialArticleApp({
 
   function requestConveyorUpdate() {
     latestScrollY = window.scrollY;
-
     if (!ticking) {
       requestAnimationFrame(updateConveyorBelt);
       ticking = true;
@@ -320,14 +226,11 @@ export function createRadialArticleApp({
   }
 
   function rebuild() {
-    if (!articleText) {
-      return;
-    }
-
+    if (!articleText) return;
     applyGeometry();
     buildLines();
     setScrollHeight();
-    renderRadial();
+    renderLinear();
   }
 
   function requestRebuild() {
@@ -335,66 +238,41 @@ export function createRadialArticleApp({
     resizeFrame = requestAnimationFrame(rebuild);
   }
 
-  function handleKeydown(event: KeyboardEvent) {
-    if (event.key === "ArrowLeft") {
-      window.scrollBy({ top: -window.innerHeight * 0.25, behavior: "smooth" });
-    }
-
-    if (event.key === "ArrowRight") {
-      window.scrollBy({ top: window.innerHeight * 0.25, behavior: "smooth" });
-    }
+  function setGuidesVisible(show: boolean) {
+    guidesVisible = show;
+    if (guideSvg) guideSvg.style.visibility = show ? "" : "hidden";
   }
 
-  function start() {
-    window.addEventListener("scroll", requestConveyorUpdate, { passive: true });
-    window.addEventListener("resize", requestRebuild);
-    window.addEventListener("keydown", handleKeydown);
-  }
-
-  function destroy() {
-    window.removeEventListener("scroll", requestConveyorUpdate);
-    window.removeEventListener("resize", requestRebuild);
-    window.removeEventListener("keydown", handleKeydown);
-    cancelAnimationFrame(resizeFrame);
-  }
-
-  function loadText(text: string) {
-    articleText = text;
-    if (text) {
+  return {
+    start() {
       rebuild();
-      status.hidden = true;
-    }
-  }
-
-  function setShape(kind: "stadium" | "ellipse" | "wave") {
-    if (!shapeFactories[kind] || kind === activeShapeKind) return;
-    activeShapeKind = kind;
-    rebuild();
-  }
-
-  function setOptions(opts: Partial<AppShapeOptions>) {
-    Object.assign(shapeOptions, opts);
-    rebuild();
-  }
-
-  function setLoop(val: boolean) {
-    loopContent = val;
-    updateConveyorBelt();
-  }
-
-  function setTypography(opts: TypographyOptions) {
-    typography = opts;
-    rebuild();
-  }
-
-  function getDiscEl(): HTMLElement {
-    return disc;
-  }
-
-  return { start, destroy, loadText, setShape, setOptions, setLoop, setTypography, setGuidesVisible, getDiscEl };
-}
-
-function lineTransform(line: { x: number; y: number; angleDeg: number; fontSize: number }): string {
-  const pivotAdjY = line.y - line.fontSize / 2;
-  return `translate(${line.x}px, ${pivotAdjY}px) rotate(${line.angleDeg}deg)`;
+      window.addEventListener("scroll", requestConveyorUpdate, { passive: true });
+      window.addEventListener("resize", requestRebuild);
+    },
+    destroy() {
+      window.removeEventListener("scroll", requestConveyorUpdate);
+      window.removeEventListener("resize", requestRebuild);
+      cancelAnimationFrame(resizeFrame);
+    },
+    loadText(text: string) {
+      articleText = text;
+      rebuild();
+    },
+    setOptions(opts: Partial<AppShapeOptions>) {
+      Object.assign(shapeOptions, opts);
+      rebuild();
+    },
+    setLoop(val: boolean) {
+      loopContent = val;
+      requestConveyorUpdate();
+    },
+    setTypography(opts: TypographyOptions) {
+      Object.assign(typography, opts);
+      rebuild();
+    },
+    setGuidesVisible,
+    getDiscEl() {
+      return disc;
+    },
+  };
 }

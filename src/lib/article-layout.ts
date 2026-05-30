@@ -655,6 +655,109 @@ export function createWaveShape(
   };
 }
 
+export interface DnaShapeOptions {
+  dnaPitch?: number;      // 2–8, helix tightness (like waveCycles)
+  dnaAmplitude?: number;  // 0.2–0.6, oscillation height (like waveAmplitude)
+  dnaStrandGap?: number;  // pixels, distance between upper and lower strand
+}
+
+// DNA helix shape: an open figure with two sinusoidal strands oscillating in opposite phase.
+// Text runs perpendicular between them, connecting the strands like base pairs.
+// Upper strand goes up-down, lower strand goes down-up.
+export function createDnaHelix(
+  viewportWidth: number,
+  viewportHeight: number,
+  { dnaPitch = 4, dnaAmplitude = 0.35, dnaStrandGap = 100 }: DnaShapeOptions = {},
+): TrackShape {
+  const maxX = Math.max(1, viewportWidth - DISC_MARGIN * 2);
+  const gapPx = Math.max(40, Math.min(200, Math.round(dnaStrandGap)));
+  const amplitudePx = Math.round(gapPx * Math.min(Math.abs(dnaAmplitude), 0.9));
+  const pitch = Math.max(1, Math.round(dnaPitch));
+
+  // Upper strand: oscillates up and down (center-relative coordinates)
+  function upperStrand(t: number): { x: number; y: number } {
+    const x = -maxX / 2 + t * maxX;
+    const y = amplitudePx * Math.sin(pitch * 2 * Math.PI * t);
+    return { x, y };
+  }
+
+  // Lower strand: oscillates in opposite phase (crosses the upper strand)
+  function lowerStrand(t: number): { x: number; y: number } {
+    const x = -maxX / 2 + t * maxX;
+    const y = -amplitudePx * Math.sin(pitch * 2 * Math.PI * t);
+    return { x, y };
+  }
+
+  // Point between the two strands with perpendicular angle
+  function point(t: number): { x: number; y: number; angleDeg: number; lineWidth: number } {
+    const nt = ((t % 1) + 1) % 1;
+    const upper = upperStrand(nt);
+    const lower = lowerStrand(nt);
+
+    // Position is midpoint between strands
+    const x = (upper.x + lower.x) / 2;
+    const y = (upper.y + lower.y) / 2;
+
+    // Perpendicular angle connecting the strands
+    const dx = lower.x - upper.x;
+    const dy = lower.y - upper.y;
+    const angleDeg = Math.atan2(dy, dx) * (180 / Math.PI);
+
+    // Line width is the distance between strands
+    const lineWidth = Math.sqrt(dx * dx + dy * dy);
+
+    return { x, y, angleDeg, lineWidth };
+  }
+
+  // Perimeter: from left to right edge
+  const perimeter = maxX;
+
+  // Guide paths for the two strands
+  function outerGuidePath(cx: number, cy: number): string {
+    const N = 360;
+    const upperParts: string[] = [];
+
+    for (let i = 0; i <= N; i++) {
+      const t = i / N;
+      const upper = upperStrand(t);
+      const ux = (cx + upper.x).toFixed(2);
+      const uy = (cy + upper.y).toFixed(2);
+      upperParts.push(`${i === 0 ? "M" : "L"}${ux},${uy}`);
+    }
+
+    return upperParts.join(" ");
+  }
+
+  function innerGuidePath(cx: number, cy: number): string {
+    const N = 360;
+    const lowerParts: string[] = [];
+
+    for (let i = 0; i <= N; i++) {
+      const t = i / N;
+      const lower = lowerStrand(t);
+      const lx = (cx + lower.x).toFixed(2);
+      const ly = (cy + lower.y).toFixed(2);
+      lowerParts.push(`${i === 0 ? "M" : "L"}${lx},${ly}`);
+    }
+
+    return lowerParts.join(" ");
+  }
+
+  return {
+    point,
+    perimeter,
+    lineWidth: gapPx,
+    outerWidth: maxX,
+    outerHeight: viewportHeight,
+    outerBorderRadius: "0px",
+    innerWidth: maxX,
+    innerHeight: viewportHeight,
+    innerBorderRadius: "0px",
+    outerGuidePath,
+    innerGuidePath,
+  };
+}
+
 function ellipseRayDist(px: number, py: number, nx: number, ny: number, a: number, b: number): number {
   const A = (nx * nx) / (a * a) + (ny * ny) / (b * b);
   const B = 2 * ((px * nx) / (a * a) + (py * ny) / (b * b));
